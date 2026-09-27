@@ -1,0 +1,2 @@
+# 改行コードを LF に統一する（Windows と CI で Prettier の判定を揃えるため）
+* text=auto eol=lf

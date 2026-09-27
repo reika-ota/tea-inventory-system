@@ -52,17 +52,23 @@ docs/      設計書
 
 ## コマンド
 
-※雛形作成時（実装順序1）に実際のコマンドで更新すること。
+Node.js 24（`.nvmrc`）を使用する。すべてリポジトリのルートで実行する。
 
 ```bash
-npm install            # 依存関係のインストール
-npm run lint           # 静的解析
-npm run typecheck      # 型チェック
-npm test               # 単体テスト（Vitest）
+npm install              # 依存関係のインストール（CI では npm ci）
+npm run lint             # 静的解析（ESLint）
+npm run format           # 整形（Prettier）。CI では npm run format:check
+npm run typecheck        # 型チェック（全ワークスペース）
+npm test                 # 単体テスト（Vitest、全ワークスペース）
+npm run test:watch       # 単体テスト（監視モード）
+npm run build            # gas と frontend のビルド
+npm run dev -w frontend  # 開発サーバー
 npm run build -w frontend
-npm run build -w gas   # gas/dist/Code.js を生成
-npm run push -w gas    # clasp push
+npm run build -w gas     # gas/dist/Code.js と appsscript.json を生成
+npm run push -w gas      # ビルドして clasp push（gas/.clasp.json は実装順序2で作成）
 ```
+
+CI（`.github/workflows/ci.yml`）は PR と main への push で lint・整形チェック・型チェック・テスト・ビルドを実行する。
 
 ## 開発の進め方
 
