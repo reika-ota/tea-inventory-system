@@ -7,11 +7,10 @@ export function fakeAuth(overrides: Partial<AuthContextValue> = {}): AuthContext
     status: 'signedIn',
     email: 'taro@example.com',
     signOutReason: null,
-    ready: true,
     getIdToken: vi.fn(() => 'token-1'),
     refreshIdToken: vi.fn(() => Promise.resolve('token-2')),
     signOut: vi.fn(),
-    renderSignInButton: vi.fn(),
+    renderSignInButton: vi.fn(() => () => undefined),
     ...overrides,
   };
 }

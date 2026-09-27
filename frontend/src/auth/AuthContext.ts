@@ -11,15 +11,16 @@ export interface AuthContextValue {
   /** ログイン中のメールアドレス（表示用） */
   email: string | null;
   signOutReason: SignOutReason;
-  /** Google のログインボタンを表示できる状態か */
-  ready: boolean;
   /** 現在の IDトークン（メモリ上だけに保持する） */
   getIdToken(): string | null;
   /** IDトークンを再取得する（自動ログインで取り直す）。できなければ reject */
   refreshIdToken(): Promise<string>;
   signOut(reason?: SignOutReason): void;
-  /** Google 公式のログインボタンを要素の中に表示する */
-  renderSignInButton(element: HTMLElement): void;
+  /**
+   * Google 公式のログインボタンを要素の中に表示する（初期化前なら初期化の直後に表示する）。
+   * 戻り値の関数で登録を解除する
+   */
+  renderSignInButton(element: HTMLElement): () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
