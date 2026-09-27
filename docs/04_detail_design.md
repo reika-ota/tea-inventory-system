@@ -2,8 +2,8 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.2 |
-| 作成日 | 2026-09-26（v1.2：2026-09-27） |
+| 版 | 1.3 |
+| 作成日 | 2026-09-26（v1.3：2026-09-27） |
 | フェーズ | 詳細設計 |
 | 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.1） |
 
@@ -173,7 +173,7 @@ export interface ApiError {
 | restoreBrand | `{ brandId, version }` | `Brand` |
 | receiveLot | `{ brandId, qty, bestBefore?, purchasedOn }` | `Lot` |
 | consume | `{ brandId, lotId?, servings? , amount? }` | `{ lot: Lot; history: StockHistory }` |
-| adjustLot | `{ lotId, version, remainingQty }` | `{ lot: Lot; history: StockHistory }` |
+| adjustLot | `{ lotId, version, remainingQty }` | `{ lot: Lot; history: StockHistory | null }`（変更なしの場合 history は null） |
 | updateLot | `{ lotId, version, bestBefore?, purchasedOn }` | `Lot` |
 | depleteLot | `{ lotId, version }` | `{ lot: Lot; history: StockHistory }` |
 | restoreLot | `{ lotId, version }` | `{ lot: Lot; history: StockHistory }` |
@@ -257,8 +257,8 @@ export interface ApiError {
 | `selectLotForConsume(lots, brandId)` | 引当ルール（有効ロットを賞味期限昇順・未入力は最後→購入日昇順→作成日時昇順）で先頭ロットを返す。なければ null |
 | `remainingServings(lots, brand)` | floor（有効ロット残量合計 ÷ servingAmount） |
 | `maxServingsForLot(lot, brand)` | floor（ロット残量 ÷ servingAmount）。杯数選択の上限 |
-| `alertLevel(lots, brand, today)` | 'EXPIRED' / 'NEAR_EXPIRY' / 'LOW' / 'NONE'（複数該当時は EXPIRED＞NEAR_EXPIRY＞LOW）※表示は複数バッジ可とするため `alerts(...)` で配列も返す |
-| `summarizeByGenre(genres, brands, lots)` | ジャンルごとの銘柄数、LEAF合計g、BAG合計個 |
+| `alertLevel(lots, brand, today)` | 'EXPIRED' / 'NEAR_EXPIRY' / 'LOW' / 'NONE'（複数該当時は EXPIRED＞NEAR_EXPIRY＞LOW）※表示は複数バッジ可とするため `alerts(...)` で配列も返す。有効ロットがない銘柄は 'NONE'（在庫なし枠で扱うため、残りわずかにもしない）。SC-03 のロット単位のバッジは `alerts([lot], brand, today)` で求める |
+| `summarizeByGenre(genres, brands, lots)` | ジャンルごとの銘柄数（有効ロットを持つ銘柄のみ）、LEAF合計g、BAG合計個。全ジャンルを表示順で返す |
 | `displayUserName(email)` | メールアドレスの@より前を返す（履歴の操作者表示用） |
 
 定数（constants.ts）：`NEAR_EXPIRY_DAYS = 30`、`LOW_SERVINGS = 3`、`DEFAULT_SERVING = { LEAF: 3, BAG: 1 }`
