@@ -58,11 +58,33 @@ describe('SC-02 在庫一覧', () => {
     expect(brandNames()).toEqual(['アールグレイ']);
   });
 
-  it('条件に合う銘柄がなければ案内を表示し、絞り込みを解除できる', async () => {
+  it('日本語入力の変換中は入力欄の文字を崩さず、確定してから絞り込む', async () => {
+    renderApp('/');
+    const input = await screen.findByRole<HTMLInputElement>('searchbox', {
+      name: '銘柄名・フレーバーで探す',
+    });
+    fireEvent.compositionStart(input);
+    for (const typing of ['あ', 'あー', 'あーる', 'アール']) {
+      fireEvent.change(input, { target: { value: typing } });
+      // 変換中は入力した文字がそのまま残り、一覧は絞り込まない
+      expect(input.value).toBe(typing);
+      expect(brandNames()).toHaveLength(3);
+    }
+    fireEvent.compositionEnd(input);
+    expect(input.value).toBe('アール');
+    expect(brandNames()).toEqual(['アールグレイ']);
+  });
+
+  it('条件に合う銘柄がなければ案内を表示し、絞り込みを解除できる（検索欄も空にする）', async () => {
     renderApp('/?q=存在しない');
     expect(await screen.findByText('条件に合う銘柄はありません')).toBeDefined();
+    const input = screen.getByRole<HTMLInputElement>('searchbox', {
+      name: '銘柄名・フレーバーで探す',
+    });
+    expect(input.value).toBe('存在しない');
     fireEvent.click(screen.getByRole('button', { name: '絞り込みを解除' }));
     expect(brandNames()).toHaveLength(3);
+    expect(input.value).toBe('');
   });
 
   it('並び替えを変えられる', async () => {
