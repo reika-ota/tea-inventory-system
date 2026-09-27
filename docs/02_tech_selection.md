@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.2 |
+| 版 | 1.3 |
 | 作成日 | 2026-09-26 |
 | フェーズ | 技術選定 |
 | 前提資料 | 01_requirements.md（v1.1） |
@@ -63,7 +63,7 @@
 ## 4. リポジトリ構成
 
 ```
-tea-inventory/
+tea-inventory-system/
 ├── docs/        設計書（要件定義〜テスト）
 ├── frontend/    React＋Vite（GitHub Pagesへデプロイ）
 ├── gas/         GAS API（バンドル後 clasp push）

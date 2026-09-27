@@ -5,7 +5,7 @@
 | 版 | 1.1 |
 | 作成日 | 2026-09-27 |
 | フェーズ | UI設計 |
-| 前提資料 | 01_requirements.md（v1.4）、03_basic_design.md（v1.2）、04_detail_design.md（v1.1） |
+| 前提資料 | 01_requirements.md（v1.4）、03_basic_design.md（v1.2）、04_detail_design.md（v1.2） |
 | 画面モック | ui/wireframe.html（全7画面、スマートフォンで操作可能） |
 
 本書は画面の仕様を定める。見た目の基準は画面モックとし、本書と画面モックが食い違う場合は本書を優先する。

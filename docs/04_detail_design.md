@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.1 |
-| 作成日 | 2026-09-26 |
+| 版 | 1.2 |
+| 作成日 | 2026-09-26（v1.2：2026-09-27） |
 | フェーズ | 詳細設計 |
-| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.2）、03_basic_design.md（v1.2）、05_ui_design.md（v1.1） |
+| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.1） |
 
 本書はClaude Codeによる実装の入力資料とする。実装中に判明した事項は本書を更新してから反映する。
 
@@ -16,7 +16,7 @@
 npm workspaces によるモノレポとする。
 
 ```
-tea-inventory/
+tea-inventory-system/
 ├── CLAUDE.md
 ├── package.json              # workspaces: frontend, gas, shared
 ├── .github/workflows/
@@ -45,7 +45,7 @@ tea-inventory/
 │       ├── services/         # 業務処理（genre, brand, lot, stock）
 │       └── maintenance.ts    # 初期データ投入・ログ削除
 └── frontend/
-    ├── vite.config.ts        # base: '/tea-inventory/'
+    ├── vite.config.ts        # base: '/tea-inventory-system/'（GitHub リポジトリ名）
     └── src/
         ├── main.tsx
         ├── App.tsx           # ルーティング・認証ガード
