@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.4 |
-| 作成日 | 2026-09-26（v1.4：2026-09-27） |
+| 版 | 1.5 |
+| 作成日 | 2026-09-26（v1.5：2026-09-27） |
 | フェーズ | 詳細設計 |
-| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.1） |
+| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.2） |
 
 本書はClaude Codeによる実装の入力資料とする。実装中に判明した事項は本書を更新してから反映する。
 
@@ -284,9 +284,11 @@ doPost(e)
 ### 6.2 認証（auth.ts）
 
 1. `https://oauth2.googleapis.com/tokeninfo?id_token=…` を UrlFetchApp で呼び出す
-2. `aud` ＝ スクリプトプロパティ `OAUTH_CLIENT_ID`、`email_verified` ＝ true、`exp` ＞ 現在時刻 を確認
+2. `iss` ＝ Google（`accounts.google.com` または `https://accounts.google.com`）、`aud` ＝ スクリプトプロパティ `OAUTH_CLIENT_ID`、`email_verified` ＝ true、`exp` ＞ 現在時刻 を確認
 3. `email` がスクリプトプロパティ `ALLOWED_EMAILS`（カンマ区切り）に含まれることを確認
-4. 検証済みトークンは CacheService に「トークンのハッシュ → email」を有効期限まで保存し、以降の検証を省略する（応答時間短縮）
+4. 検証済みトークンは CacheService に「トークンのハッシュ → email」を有効期限まで保存し、以降の検証を省略する（応答時間短縮）。許可メールアドレスの照合（3）はキャッシュ時も毎回行う
+5. 認証は action の判定より先に行う（未認証の相手に action の有無を知らせない）
+6. 認証を追加・変更して外部通信の権限が増えた場合は、GAS エディタで `checkAuthSettings()` を実行して権限を承認してから、Webアプリのデプロイを更新する
 
 ### 6.3 排他（lock.ts）
 
@@ -331,7 +333,9 @@ doPost(e)
 
 ### 7.1 認証（auth/）
 
-- `@react-oauth/google` を使用し、自動ログイン（auto_select）を有効にする
+- `@react-oauth/google` の `GoogleOAuthProvider` で Google Identity Services を読み込み、`google.accounts.id` の初期化（initialize）を1か所で行う。自動ログイン（auto_select）、公式ボタン、トークンの再取得は同じ初期化の callback でトークンを受け取る
+- 起動時は自動ログインを試み、試行中も SC-01 を表示する（Google 側で自動ログインできないことを検知できない場合があるため）。ログインに成功したら、SC-01 に移る前の画面に戻る。10秒たっても結果がなければ試行中の表示を終える
+- ログアウト時と AUTH_FORBIDDEN 時は `disableAutoSelect()` を呼び、同じアカウントで自動ログインしないようにする
 - 取得したIDトークンをメモリ上に保持する（localStorage には保存しない）
 - APIが AUTH_INVALID_TOKEN を返した場合、トークンを再取得して同一リクエスト（同一 opId）を1回だけ再送する。再取得に失敗したら SC-01 へ遷移する
 
@@ -340,6 +344,8 @@ doPost(e)
 - `fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(req) })`
 - 更新系の opId は操作開始時に `crypto.randomUUID()` で採番し、再送時も同じ値を使う
 - 環境変数：`VITE_GAS_URL`、`VITE_OAUTH_CLIENT_ID`（GitHub Actions の Variables から注入）
+- 通信できなかった場合（fetch の失敗、JSON でない応答）は、画面側のエラーコード `NETWORK_ERROR`（「通信できませんでした。電波の状態を確認して、もう一度お試しください」）として扱う
+- AUTH_FORBIDDEN の場合はログアウトし、SC-01 に許可されていないアカウントのエラーを表示する。トークンを再取得できなかった場合もログアウトし、SC-01 に有効期限切れの案内を表示する
 
 ### 7.3 TanStack Query
 
