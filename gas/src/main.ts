@@ -1,28 +1,18 @@
-import { APP_NAME } from '@chaicoss/shared';
+// GAS のエントリ。ここで export した関数は、バンドル後にトップレベルの関数として出力される
+// （doPost はWebアプリの入口、その他は GAS エディタから実行する保守処理）。
+import { createRouter } from './router';
+import { getAll } from './services/query';
 
-/**
- * Webアプリの POST エントリ。
- * スパイク（実装順序2）の段階では、受け取った action をそのまま返す固定レスポンスとする。
- * 認証・ルーティングは実装順序4・5で追加する。
- */
+export { checkGetAll, seedInitialData, setupSheets } from './maintenance';
+
+const handle = createRouter({
+  getAll: () => getAll(),
+});
+
+/** Webアプリの POST エントリ（詳細設計 6.1）。GAS は常に HTTP 200 を返す */
 export function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
-  const body = JSON.stringify({
-    ok: true,
-    data: { app: APP_NAME, receivedAction: readAction(e.postData?.contents) },
-  });
-  return ContentService.createTextOutput(body).setMimeType(ContentService.MimeType.JSON);
-}
-
-/** リクエスト本文（JSON文字列）から action を取り出す。読めなければ null */
-function readAction(contents: string | undefined): string | null {
-  if (!contents) return null;
-  try {
-    const parsed: unknown = JSON.parse(contents);
-    if (typeof parsed === 'object' && parsed !== null && 'action' in parsed) {
-      return typeof parsed.action === 'string' ? parsed.action : null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  const response = handle(e.postData?.contents ?? '');
+  return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(
+    ContentService.MimeType.JSON,
+  );
 }

@@ -5,12 +5,19 @@ import esbuild from 'rollup-plugin-esbuild';
 /**
  * GAS はトップレベルの関数宣言をトリガー関数（doPost 等）として扱うため、
  * ES module の出力末尾に付く `export { ... };` を取り除く。
+ * 名前の衝突で関数名が変わった場合（`export { doPost$1 as doPost }`）は、GAS から呼べなくなるためビルドを失敗させる。
  */
 function stripExports() {
+  const pattern = /^export\s*\{([^}]*)\};?\s*$/gm;
   return {
     name: 'strip-exports',
     renderChunk(code) {
-      return { code: code.replace(/^export\s*\{[^}]*\};?\s*$/gm, ''), map: null };
+      for (const [, names] of code.matchAll(pattern)) {
+        if (/\bas\b/.test(names)) {
+          this.error(`トップレベルの関数名が変わっています: export {${names}}`);
+        }
+      }
+      return { code: code.replace(pattern, ''), map: null };
     },
   };
 }
