@@ -16,6 +16,18 @@ interface Waiter {
   reject(error: Error): void;
 }
 
+/** Google 公式のログインボタンを要素の中に描画する */
+function drawSignInButton(element: HTMLElement): void {
+  google.accounts.id.renderButton(element, {
+    type: 'standard',
+    theme: 'outline',
+    size: 'large',
+    shape: 'pill',
+    text: 'signin_with',
+    locale: 'ja',
+  });
+}
+
 /** 自動ログイン（One Tap）を表示する。ログインせずに閉じられたら onFail を呼ぶ */
 function promptSignIn(onFail: () => void): void {
   google.accounts.id.prompt((notification) => {
@@ -31,6 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // IDトークンはメモリ上（ref）だけに保持し、localStorage などには保存しない
   const tokenRef = useRef<string | null>(null);
   const waitersRef = useRef<Waiter[]>([]);
+  // Google Identity Services を初期化（initialize）したか。ボタンの描画・トークンの再取得は初期化の後に行う
+  // （子の画面の effect は親より先に動くため、初期化より前に呼ばれることがある）
+  const initializedRef = useRef(false);
+  // ログインボタンを描画する要素（ログイン画面が登録する）
+  const buttonElementRef = useRef<HTMLElement | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [email, setEmail] = useState<string | null>(null);
   const [signOutReason, setSignOutReason] = useState<SignOutReason>(null);
@@ -65,8 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         settleWaiters((w) => w.resolve(credential));
       },
     });
+    initializedRef.current = true;
+    // 初期化の前に登録されていたボタンは、ここで描画する
+    if (buttonElementRef.current) drawSignInButton(buttonElementRef.current);
     promptSignIn(() => setStatus((s) => (s === 'loading' ? 'signedOut' : s)));
-    return () => google.accounts.id.cancel();
+    return () => {
+      initializedRef.current = false;
+      google.accounts.id.cancel();
+    };
   }, [clientId, scriptLoadedSuccessfully, settleWaiters]);
 
   // スクリプトの読み込みに失敗した場合なども、一定時間でログイン画面に切り替える
@@ -83,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshIdToken = useCallback(
     () =>
       new Promise<string>((resolve, reject) => {
-        if (!scriptLoadedSuccessfully) {
+        if (!initializedRef.current) {
           reject(new Error('ログインの準備ができていません'));
           return;
         }
@@ -94,59 +117,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(failWaiters, PROMPT_TIMEOUT_MS);
         }
       }),
-    [scriptLoadedSuccessfully, failWaiters],
+    [failWaiters],
   );
 
-  const signOut = useCallback(
-    (reason: SignOutReason = null) => {
-      tokenRef.current = null;
-      if (scriptLoadedSuccessfully) {
-        // 次回、同じアカウントで自動ログインしないようにする
-        google.accounts.id.disableAutoSelect();
-      }
-      setEmail(null);
-      setSignOutReason(reason);
-      setStatus('signedOut');
-    },
-    [scriptLoadedSuccessfully],
-  );
+  const signOut = useCallback((reason: SignOutReason = null) => {
+    tokenRef.current = null;
+    if (initializedRef.current) {
+      // 次回、同じアカウントで自動ログインしないようにする
+      google.accounts.id.disableAutoSelect();
+    }
+    setEmail(null);
+    setSignOutReason(reason);
+    setStatus('signedOut');
+  }, []);
 
-  const renderSignInButton = useCallback(
-    (element: HTMLElement) => {
-      if (!scriptLoadedSuccessfully) return;
-      google.accounts.id.renderButton(element, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        shape: 'pill',
-        text: 'signin_with',
-        locale: 'ja',
-      });
-    },
-    [scriptLoadedSuccessfully],
-  );
+  const renderSignInButton = useCallback((element: HTMLElement) => {
+    buttonElementRef.current = element;
+    if (initializedRef.current) drawSignInButton(element);
+    return () => {
+      if (buttonElementRef.current === element) buttonElementRef.current = null;
+    };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
       email,
       signOutReason,
-      ready: scriptLoadedSuccessfully,
       getIdToken,
       refreshIdToken,
       signOut,
       renderSignInButton,
     }),
-    [
-      status,
-      email,
-      signOutReason,
-      scriptLoadedSuccessfully,
-      getIdToken,
-      refreshIdToken,
-      signOut,
-      renderSignInButton,
-    ],
+    [status, email, signOutReason, getIdToken, refreshIdToken, signOut, renderSignInButton],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

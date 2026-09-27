@@ -22,18 +22,17 @@ function returnPath(state: unknown): string {
 }
 
 export function LoginPage() {
-  const { status, signOutReason, ready, renderSignInButton } = useAuth();
+  const { status, signOutReason, renderSignInButton } = useAuth();
   const location = useLocation();
   const buttonRef = useRef<HTMLDivElement>(null);
   const signedIn = status === 'signedIn';
 
-  // Google 公式のログインボタンを表示する（Google のスクリプトの読み込み後）。
+  // Google 公式のログインボタンを表示する。
   // 自動ログインの試行中も表示しておき、自動ログインできない場合に待たせない
   useEffect(() => {
-    if (ready && !signedIn && buttonRef.current) {
-      renderSignInButton(buttonRef.current);
-    }
-  }, [ready, signedIn, renderSignInButton]);
+    if (signedIn || !buttonRef.current) return;
+    return renderSignInButton(buttonRef.current);
+  }, [signedIn, renderSignInButton]);
 
   if (signedIn) return <Navigate to={returnPath(location.state)} replace />;
 
