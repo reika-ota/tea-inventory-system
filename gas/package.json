@@ -1,0 +1,22 @@
+{
+  "name": "@chaicoss/gas",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "push": "npm run build && clasp push",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chaicoss/shared": "*"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.4.1",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@types/google-apps-script": "^2.0.13",
+    "esbuild": "^0.28.2",
+    "rollup": "^4.63.5",
+    "rollup-plugin-esbuild": "^6.2.1"
+  }
+}

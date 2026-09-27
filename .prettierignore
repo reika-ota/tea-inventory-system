@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+package-lock.json
+# 設計書・画面モック・CLAUDE.md は整形対象外（手書きの体裁を保つため）
+docs/
+CLAUDE.md
