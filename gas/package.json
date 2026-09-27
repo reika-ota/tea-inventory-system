@@ -6,6 +6,7 @@
   "scripts": {
     "build": "rollup -c",
     "push": "npm run build && clasp push --force",
+    "deploy": "npm run push && clasp update-deployment AKfycbxQEtn3XGLMABgHgno4Yau38hT-aPFuxyMdDIiL3mMgeJvy9RM4oRUhPISNwbq-p7rn",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
