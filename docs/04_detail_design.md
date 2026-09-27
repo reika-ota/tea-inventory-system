@@ -2,8 +2,8 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.5 |
-| 作成日 | 2026-09-26（v1.5：2026-09-27） |
+| 版 | 1.6 |
+| 作成日 | 2026-09-26（v1.6：2026-09-27） |
 | フェーズ | 詳細設計 |
 | 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.2） |
 
@@ -163,7 +163,7 @@ export interface ApiError {
 | action | payload | data |
 |---|---|---|
 | getAll | `{}` | `{ genres: Genre[]; colors: ColorOption[]; brands: Brand[]; lots: Lot[] }` |
-| getHistories | `{ brandId }` | `StockHistory[]`（新しい順） |
+| getHistories | `{ brandId }` | `StockHistory[]`（新しい順。発生日時が同じ場合は後から記録したものを新しいとみなす）。銘柄がなければ NOT_FOUND |
 | createGenre | `{ name, color, sortOrder }` | `Genre` |
 | updateGenre | `{ genreId, version, name, color, sortOrder }` | `Genre` |
 | deleteGenre | `{ genreId, version }` | `{ genreId }` |
@@ -257,9 +257,13 @@ export interface ApiError {
 | `selectLotForConsume(lots, brandId)` | 引当ルール（有効ロットを賞味期限昇順・未入力は最後→購入日昇順→作成日時昇順）で先頭ロットを返す。なければ null |
 | `remainingServings(lots, brand)` | floor（有効ロット残量合計 ÷ servingAmount） |
 | `maxServingsForLot(lot, brand)` | floor（ロット残量 ÷ servingAmount）。杯数選択の上限 |
-| `alertLevel(lots, brand, today)` | 'EXPIRED' / 'NEAR_EXPIRY' / 'LOW' / 'NONE'（複数該当時は EXPIRED＞NEAR_EXPIRY＞LOW）※表示は複数バッジ可とするため `alerts(...)` で配列も返す。有効ロットがない銘柄は 'NONE'（在庫なし枠で扱うため、残りわずかにもしない）。SC-03 のロット単位のバッジは `alerts([lot], brand, today)` で求める |
+| `alertLevel(lots, brand, today)` | 'EXPIRED' / 'NEAR_EXPIRY' / 'LOW' / 'NONE'（複数該当時は EXPIRED＞NEAR_EXPIRY＞LOW）※表示は複数バッジ可とするため `alerts(...)` で配列も返す。有効ロットがない銘柄は 'NONE'（在庫なし枠で扱うため、残りわずかにもしない）。SC-03 のロット単位のバッジは `alerts([lot], brand, today)` から期限によるもの（EXPIRED・NEAR_EXPIRY）だけを表示する（残りわずかは銘柄単位の強調のため。画面モックに合わせる） |
 | `summarizeByGenre(genres, brands, lots)` | ジャンルごとの銘柄数（有効ロットを持つ銘柄のみ）、LEAF合計g、BAG合計個。全ジャンルを表示順で返す |
 | `displayUserName(email)` | メールアドレスの@より前を返す（履歴の操作者表示用） |
+| `totalRemainingQty(lots, brand)` | 有効ロットの残量合計（SC-02・SC-03 の合計残量） |
+| `fillRatio(lots, brand)` | TeaCup の塗りの割合＝有効ロットの残量合計 ÷ 購入量合計（0〜1） |
+| `nearestBestBefore(lots, brand)` | 有効ロットの最も近い賞味期限（SC-02 の行、期限が近い順の並び替え） |
+| `toJstDate(date)` / `toJstDateTime(date)` | JST の日付・日時の文字列。当日の判定（フロントエンド）と記録日時（GAS）に使う |
 
 定数（constants.ts）：`NEAR_EXPIRY_DAYS = 30`、`LOW_SERVINGS = 3`、`DEFAULT_SERVING = { LEAF: 3, BAG: 1 }`
 
@@ -394,6 +398,9 @@ doPost(e)
 - 数量表示：LEAF は `12.5g`（整数なら `12g`）、BAG は `8個`
 - 日付表示：`2026/09/26`
 - SC-02 の並び順の初期値：強調状態（期限切れ→期限間近→残りわずか→なし）→銘柄名
+- SC-02 の絞り込み・並び替えの状態は URL のクエリ文字列（`#/?genre=…&form=…&sort=…&alert=…&q=…`）に持たせる。詳細画面から戻ったとき、SC-06 からジャンルで絞り込んで遷移するときに使う
+- 当日はブラウザの時計による JST の日付とする
+- ログアウト時は TanStack Query のキャッシュを破棄する
 
 ---
 
