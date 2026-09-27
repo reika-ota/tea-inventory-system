@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
-    "push": "npm run build && clasp push",
+    "push": "npm run build && clasp push --force",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
