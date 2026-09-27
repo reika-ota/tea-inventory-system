@@ -50,7 +50,7 @@ export interface SeedBrand {
   initialQty?: number;
 }
 
-/** 銘柄・在庫の初期値（要件定義 5.1、2026-09-26 時点の棚卸し） */
+/** 銘柄・在庫の初期値（要件定義 5.1、2026-09-26 時点の棚卸し。購入量はパッケージの入り数） */
 export const SEED_BRANDS: readonly SeedBrand[] = [
   {
     name: 'ビスドプランタン',
@@ -59,6 +59,7 @@ export const SEED_BRANDS: readonly SeedBrand[] = [
     form: 'LEAF',
     qty: 8,
     serving: 5,
+    initialQty: 50,
   },
   {
     name: 'ラビアンローズ',
@@ -67,6 +68,7 @@ export const SEED_BRANDS: readonly SeedBrand[] = [
     form: 'LEAF',
     qty: 27,
     serving: 3,
+    initialQty: 50,
   },
   {
     name: 'ウバハイランズクオリティ',
@@ -75,12 +77,43 @@ export const SEED_BRANDS: readonly SeedBrand[] = [
     form: 'LEAF',
     qty: 8,
     serving: 3,
+    initialQty: 50,
   },
-  { name: '白牡丹', genre: '白茶', flavors: [], form: 'LEAF', qty: 86 },
-  { name: '台湾茉莉花茶', genre: 'ジャスミンティー', flavors: [], form: 'LEAF', qty: 49 },
-  { name: '桂花烏龍茶', genre: 'ウーロン茶', flavors: ['キンモクセイ'], form: 'LEAF', qty: 60 },
-  { name: '水仙', genre: 'ウーロン茶', flavors: [], form: 'LEAF', qty: 31, serving: 8 },
-  { name: '宇治やぶきた', genre: '緑茶', flavors: [], form: 'LEAF', qty: 31, serving: 5 },
+  { name: '白牡丹', genre: '白茶', flavors: [], form: 'LEAF', qty: 86, initialQty: 100 },
+  {
+    name: '台湾茉莉花茶',
+    genre: 'ジャスミンティー',
+    flavors: [],
+    form: 'LEAF',
+    qty: 49,
+    initialQty: 100,
+  },
+  {
+    name: '桂花烏龍茶',
+    genre: 'ウーロン茶',
+    flavors: ['キンモクセイ'],
+    form: 'LEAF',
+    qty: 60,
+    initialQty: 100,
+  },
+  {
+    name: '水仙',
+    genre: 'ウーロン茶',
+    flavors: [],
+    form: 'LEAF',
+    qty: 31,
+    serving: 8,
+    initialQty: 50,
+  },
+  {
+    name: '宇治やぶきた',
+    genre: '緑茶',
+    flavors: [],
+    form: 'LEAF',
+    qty: 31,
+    serving: 5,
+    initialQty: 50,
+  },
   {
     name: 'アールグレイグランドクラシック',
     genre: '紅茶',
@@ -88,18 +121,27 @@ export const SEED_BRANDS: readonly SeedBrand[] = [
     form: 'LEAF',
     qty: 12,
     serving: 3,
+    initialQty: 50,
   },
-  { name: 'ミントブラックティ', genre: '紅茶', flavors: ['ミント'], form: 'BAG', qty: 8 },
+  {
+    name: 'ミントブラックティ',
+    genre: '紅茶',
+    flavors: ['ミント'],
+    form: 'BAG',
+    qty: 8,
+    initialQty: 25,
+  },
   {
     name: 'きらめき果実',
     genre: '紅茶',
     flavors: ['苺', 'マンゴー', 'オレンジ', 'バナナ'],
     form: 'BAG',
     qty: 3,
+    initialQty: 11,
   },
-  { name: '和紅茶', genre: '紅茶', flavors: [], form: 'BAG', qty: 2 },
-  { name: 'JAFTEA', genre: '紅茶', flavors: [], form: 'BAG', qty: 1 },
-  { name: '東方美人茶', genre: 'ウーロン茶', flavors: [], form: 'BAG', qty: 1 },
+  { name: '和紅茶', genre: '紅茶', flavors: [], form: 'BAG', qty: 2, initialQty: 5 },
+  { name: 'JAFTEA', genre: '紅茶', flavors: [], form: 'BAG', qty: 1, initialQty: 20 },
+  { name: '東方美人茶', genre: 'ウーロン茶', flavors: [], form: 'BAG', qty: 1, initialQty: 10 },
 ];
 
 /** 初期データの購入日（購入日が不明なため棚卸し日とする） */

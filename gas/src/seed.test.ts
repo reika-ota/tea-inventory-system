@@ -15,6 +15,32 @@ describe('buildSeedData', () => {
     expect(seed.lots).toHaveLength(14);
   });
 
+  it('銘柄ごとの残量／購入量（棚卸しメモとパッケージの入り数）', () => {
+    const qtyOf = (name: string) => {
+      const brand = seed.brands.find((b) => b.name === name);
+      const lot = seed.lots.find((l) => l.brandId === brand?.brandId);
+      return [lot?.remainingQty, lot?.initialQty];
+    };
+    expect(Object.fromEntries(SEED_BRANDS.map((b) => [b.name, qtyOf(b.name)]))).toEqual({
+      ビスドプランタン: [8, 50],
+      ラビアンローズ: [27, 50],
+      ウバハイランズクオリティ: [8, 50],
+      白牡丹: [86, 100],
+      台湾茉莉花茶: [49, 100],
+      桂花烏龍茶: [60, 100],
+      水仙: [31, 50],
+      宇治やぶきた: [31, 50],
+      アールグレイグランドクラシック: [12, 50],
+      ミントブラックティ: [8, 25],
+      きらめき果実: [3, 11],
+      和紅茶: [2, 5],
+      JAFTEA: [1, 20],
+      東方美人茶: [1, 10],
+    });
+    // 全ロットで購入量と残量が違うため、履歴は IN と ADJUST の2件ずつ
+    expect(seed.histories).toHaveLength(28);
+  });
+
   it('ジャンルの色はすべて色マスタにあり、表示順は 1〜7', () => {
     const codes = seed.colors.map((c) => c.colorCode);
     expect(seed.genres.every((g) => codes.includes(g.color))).toBe(true);
