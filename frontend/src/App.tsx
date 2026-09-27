@@ -1,33 +1,45 @@
-import { APP_NAME } from '@chaicoss/shared';
-import { useState } from 'react';
+// ルーティングと認証ガード（詳細設計 7.4）
+import type { ReactNode } from 'react';
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { useAuth } from './auth/AuthContext';
+import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/LoginPage';
 
-// スパイク（実装順序2）の仮画面：GAS の固定レスポンスを取得して表示する。
-// 実装順序5・6で、ルーティング・認証ガード付きの画面に置き換える。
-export default function App() {
-  const [result, setResult] = useState<string>('');
-
-  async function callGas() {
-    setResult('接続中…');
-    try {
-      // GAS はプリフライト（OPTIONS）に応答できないため text/plain で送る（技術選定 5 No.2）
-      const res = await fetch(import.meta.env.VITE_GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'ping', payload: {} }),
-      });
-      setResult(JSON.stringify(await res.json(), null, 2));
-    } catch (e) {
-      setResult(`失敗：${String(e)}`);
-    }
+/**
+ * ログインしていなければログイン画面（SC-01）へ移動する。
+ * 自動ログインの試行中もログイン画面を表示し、成功したら元の画面に戻る
+ * （Google 側で自動ログインできないことを検知できない場合があり、待たせないため）。
+ */
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { status } = useAuth();
+  const location = useLocation();
+  if (status !== 'signedIn') {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
+  return children;
+}
 
+export function AppRoutes() {
   return (
-    <main>
-      <h1>{APP_NAME}</h1>
-      <button type="button" onClick={() => void callGas()}>
-        GAS に接続
-      </button>
-      <pre>{result}</pre>
-    </main>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <HomePage />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <HashRouter>
+      <AppRoutes />
+    </HashRouter>
   );
 }

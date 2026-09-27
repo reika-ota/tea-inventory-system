@@ -11,6 +11,7 @@ import {
   ensureSheet,
   hasRows,
 } from './repository';
+import { describeAuthSettings } from './auth';
 import { buildSeedData } from './seed';
 import { getAll } from './services/query';
 
@@ -42,6 +43,19 @@ export function seedInitialData(): void {
     `初期データを投入しました：色${seed.colors.length}件、ジャンル${seed.genres.length}件、` +
       `銘柄${seed.brands.length}件、ロット${seed.lots.length}件、履歴${seed.histories.length}件`,
   );
+}
+
+/**
+ * 認証の設定状況をログに出す（動作確認用）。
+ * 外部への通信（UrlFetchApp）を含むため、初回の実行時にその権限の承認を求められる。
+ * Webアプリは承認済みの権限で動くため、認証を追加した後に一度実行しておく。
+ */
+export function checkAuthSettings(): void {
+  console.log(describeAuthSettings());
+  const res = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=invalid', {
+    muteHttpExceptions: true,
+  });
+  console.log(`tokeninfo への接続：HTTP ${res.getResponseCode()}（400 なら正常）`);
 }
 
 /** getAll の結果をログに出す（動作確認用） */
