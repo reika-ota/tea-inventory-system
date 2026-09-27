@@ -1,11 +1,9 @@
 // SC-02 在庫一覧（UI設計 2.2）
 import type { AlertKind, Form } from '@chaicoss/shared';
 import { toJstDate } from '@chaicoss/shared';
-import Search from '@mui/icons-material/Search';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
-import InputBase from '@mui/material/InputBase';
 import NativeSelect from '@mui/material/NativeSelect';
 import Paper from '@mui/material/Paper';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -16,6 +14,7 @@ import { ALERT_COLORS, ALERT_LABELS } from '../components/alertStyles';
 import { LoadError, Loading, SectionTitle } from '../components/QueryStatus';
 import { TabLayout } from '../components/TabLayout';
 import { BrandRow, NoStockRow } from '../features/inventory/BrandRow';
+import { SearchBox } from '../features/inventory/SearchBox';
 import type { FormFilter, InventoryFilters, SortKey } from '../features/inventory/inventoryView';
 import {
   ALERT_KINDS,
@@ -85,28 +84,7 @@ export function InventoryPage() {
           </Box>
 
           {/* 検索（銘柄名・フレーバーの部分一致） */}
-          <Paper
-            variant="outlined"
-            sx={{
-              mx: 2,
-              mt: 1,
-              px: 1.5,
-              height: 44,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <Search sx={{ color: 'text.secondary' }} aria-hidden />
-            <InputBase
-              type="search"
-              placeholder="銘柄名・フレーバーで探す"
-              value={filters.q}
-              onChange={(e) => update({ q: e.target.value })}
-              inputProps={{ 'aria-label': '銘柄名・フレーバーで探す' }}
-              sx={{ flex: 1 }}
-            />
-          </Paper>
+          <SearchBox value={filters.q} onChange={(q) => update({ q })} />
 
           {/* ジャンルチップ（横スクロール） */}
           <Box
