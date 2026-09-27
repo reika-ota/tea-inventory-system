@@ -8,8 +8,6 @@ import {
   historyToRow,
   lotFromRow,
   lotToRow,
-  toJstDate,
-  toJstDateTime,
 } from './mapping';
 
 const audit = {
@@ -19,14 +17,6 @@ const audit = {
   updatedAt: '2026-09-27T08:00:00+09:00',
   updatedBy: 'b@example.com',
 };
-
-describe('toJstDateTime / toJstDate', () => {
-  it('UTC の時刻を JST（+09:00）で表す', () => {
-    const date = new Date('2026-09-26T15:30:00Z');
-    expect(toJstDateTime(date)).toBe('2026-09-27T00:30:00+09:00');
-    expect(toJstDate(date)).toBe('2026-09-27');
-  });
-});
 
 describe('銘柄の変換', () => {
   const brand: Brand = {

@@ -1,5 +1,5 @@
 // 日付（YYYY-MM-DD）の計算。タイムゾーンの影響を受けないよう UTC の暦日として扱う。
-import type { IsoDate } from '../types';
+import type { IsoDate, IsoDateTime } from '../types';
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -16,6 +16,18 @@ function toUtcMs(date: string): number | null {
     return null;
   }
   return ms;
+}
+
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** 日時を JST の ISO 8601（例：2026-09-26T21:30:00+09:00）にする */
+export function toJstDateTime(date: Date): IsoDateTime {
+  return new Date(date.getTime() + JST_OFFSET_MS).toISOString().slice(0, 19) + '+09:00';
+}
+
+/** 日時を JST の日付（例：2026-09-26）にする。当日の判定に使う */
+export function toJstDate(date: Date): IsoDate {
+  return toJstDateTime(date).slice(0, 10);
 }
 
 /** `YYYY-MM-DD` 形式の実在する日付か */

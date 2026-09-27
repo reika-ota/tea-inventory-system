@@ -2,13 +2,14 @@
 // （doPost はWebアプリの入口、その他は GAS エディタから実行する保守処理）。
 import { authenticate } from './auth';
 import { createRouter } from './router';
-import { getAll } from './services/query';
+import { getAll, getHistories } from './services/query';
 
 export { checkAuthSettings, checkGetAll, seedInitialData, setupSheets } from './maintenance';
 
 const handle = createRouter(
   {
     getAll: () => getAll(),
+    getHistories: (payload) => getHistories(payload),
   },
   authenticate,
 );

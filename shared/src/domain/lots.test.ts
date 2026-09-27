@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { makeBrand, makeLot } from '../test/fixtures';
 import {
   activeLotsOf,
+  fillRatio,
   maxServingsForLot,
+  nearestBestBefore,
   remainingServings,
   selectLotForConsume,
   totalRemainingQty,
@@ -114,5 +116,44 @@ describe('maxServingsForLot', () => {
     expect(maxServingsForLot(makeLot({ remainingQty: 8 }), brand)).toBe(1);
     expect(maxServingsForLot(makeLot({ remainingQty: 4.9 }), brand)).toBe(0);
     expect(maxServingsForLot(makeLot({ remainingQty: 10 }), brand)).toBe(2);
+  });
+});
+
+describe('fillRatio', () => {
+  const brand = makeBrand();
+
+  it('有効ロットの残量合計 ÷ 購入量合計', () => {
+    const lots = [
+      makeLot({ lotId: 'a', initialQty: 50, remainingQty: 10 }),
+      makeLot({ lotId: 'b', initialQty: 50, remainingQty: 20 }),
+      makeLot({ lotId: 'c', initialQty: 100, remainingQty: 0, isDepleted: true }),
+    ];
+    expect(fillRatio(lots, brand)).toBe(0.3);
+  });
+
+  it('有効ロットがなければ0', () => {
+    expect(fillRatio([], brand)).toBe(0);
+  });
+
+  it('残量が購入量を超えても1まで', () => {
+    expect(fillRatio([makeLot({ initialQty: 10, remainingQty: 12 })], brand)).toBe(1);
+  });
+});
+
+describe('nearestBestBefore', () => {
+  const brand = makeBrand();
+
+  it('有効ロットのうち最も近い賞味期限（未入力は除く）', () => {
+    const lots = [
+      makeLot({ lotId: 'a', bestBefore: '2027-01-01' }),
+      makeLot({ lotId: 'b', bestBefore: null }),
+      makeLot({ lotId: 'c', bestBefore: '2026-11-01' }),
+      makeLot({ lotId: 'd', bestBefore: '2026-01-01', isDepleted: true }),
+    ];
+    expect(nearestBestBefore(lots, brand)).toBe('2026-11-01');
+  });
+
+  it('すべて未入力なら null', () => {
+    expect(nearestBestBefore([makeLot({ bestBefore: null })], brand)).toBeNull();
   });
 });
