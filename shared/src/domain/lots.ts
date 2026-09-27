@@ -1,6 +1,6 @@
 // ロットの引当・残り杯数（詳細設計 5、基本設計 5.1・5.3）
-import type { Brand, Lot, Uuid } from '../types';
-import { servingsOf, sumQty } from './quantity';
+import type { Brand, IsoDate, Lot, Uuid } from '../types';
+import { servingsOf, sumQty, toTenths } from './quantity';
 
 /** 指定銘柄の有効ロット（使い切りでないロット） */
 export function activeLotsOf(lots: readonly Lot[], brandId: Uuid): Lot[] {
@@ -40,6 +40,25 @@ export function totalRemainingQty(lots: readonly Lot[], brand: Brand): number {
 /** 残り杯数 ＝ floor（有効ロットの残量合計 ÷ 1杯の量） */
 export function remainingServings(lots: readonly Lot[], brand: Brand): number {
   return servingsOf(totalRemainingQty(lots, brand), brand.servingAmount);
+}
+
+/**
+ * お茶の色の丸（TeaCup）の塗りの割合 ＝ 有効ロットの残量合計 ÷ 購入量合計（0〜1）。
+ * 有効ロットがなければ0
+ */
+export function fillRatio(lots: readonly Lot[], brand: Brand): number {
+  const active = activeLotsOf(lots, brand.brandId);
+  const initial = toTenths(sumQty(active.map((lot) => lot.initialQty)));
+  if (initial <= 0) return 0;
+  return Math.min(toTenths(totalRemainingQty(active, brand)) / initial, 1);
+}
+
+/** 有効ロットのうち最も近い賞味期限。すべて未入力（または有効ロットなし）なら null */
+export function nearestBestBefore(lots: readonly Lot[], brand: Brand): IsoDate | null {
+  const dates = activeLotsOf(lots, brand.brandId).flatMap((lot) =>
+    lot.bestBefore === null ? [] : [lot.bestBefore],
+  );
+  return dates.sort()[0] ?? null;
 }
 
 /** ロットで飲める杯数 ＝ floor（ロット残量 ÷ 1杯の量）。杯数選択の上限 */

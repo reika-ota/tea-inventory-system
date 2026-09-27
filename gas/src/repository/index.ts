@@ -7,6 +7,7 @@ import {
   colorToRow,
   genreFromRow,
   genreToRow,
+  historyFromRow,
   historyToRow,
   lotFromRow,
   lotToRow,
@@ -19,6 +20,7 @@ export const readGenres = (): Genre[] => readRows('genres').map(genreFromRow);
 export const readColors = (): ColorOption[] => readRows('colors').map(colorFromRow);
 export const readBrands = (): Brand[] => readRows('brands').map(brandFromRow);
 export const readLots = (): Lot[] => readRows('lots').map(lotFromRow);
+export const readHistories = (): StockHistory[] => readRows('stock_histories').map(historyFromRow);
 
 export const appendGenres = (genres: readonly Genre[]) =>
   appendRows('genres', genres.map(genreToRow));

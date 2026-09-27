@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { daysBetween, isValidIsoDate } from './date';
+import { daysBetween, isValidIsoDate, toJstDate, toJstDateTime } from './date';
 
 describe('isValidIsoDate', () => {
   it.each(['2026-09-27', '2028-02-29', '2026-12-31'])('%s は有効', (value) => {
@@ -34,5 +34,13 @@ describe('daysBetween', () => {
 
   it('不正な日付は例外', () => {
     expect(() => daysBetween('2026-02-30', '2026-03-01')).toThrow();
+  });
+});
+
+describe('toJstDateTime / toJstDate', () => {
+  it('UTC の時刻を JST（+09:00）で表す（日付の繰り上がりを含む）', () => {
+    const date = new Date('2026-09-26T15:30:00Z');
+    expect(toJstDateTime(date)).toBe('2026-09-27T00:30:00+09:00');
+    expect(toJstDate(date)).toBe('2026-09-27');
   });
 });

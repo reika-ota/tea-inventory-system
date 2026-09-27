@@ -11,19 +11,8 @@ import type {
   StockHistory,
   StockReason,
 } from '@chaicoss/shared';
+import { toJstDate, toJstDateTime } from '@chaicoss/shared';
 import type { Row } from './schema';
-
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
-
-/** 日時を JST の ISO 8601（例：2026-09-26T21:30:00+09:00）にする */
-export function toJstDateTime(date: Date): IsoDateTime {
-  return new Date(date.getTime() + JST_OFFSET_MS).toISOString().slice(0, 19) + '+09:00';
-}
-
-/** 日時を JST の日付（例：2026-09-26）にする */
-export function toJstDate(date: Date): IsoDate {
-  return toJstDateTime(date).slice(0, 10);
-}
 
 // ---- セルの値の読み取り ----
 // 列は書式なしテキストに設定しているが、スプレッドシートを直接編集して日付型になった場合にも対応する。

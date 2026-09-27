@@ -1,7 +1,7 @@
 // 保守処理（詳細設計 6.6）。GAS エディタから手動で実行する。
+import { toJstDateTime } from '@chaicoss/shared';
 import type { SheetName } from './repository/schema';
 import { SHEETS } from './repository/schema';
-import { toJstDateTime } from './repository/mapping';
 import {
   appendBrands,
   appendColors,
