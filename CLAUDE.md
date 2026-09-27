@@ -65,7 +65,8 @@ npm run build            # gas と frontend のビルド
 npm run dev -w frontend  # 開発サーバー
 npm run build -w frontend
 npm run build -w gas     # gas/dist/Code.js と appsscript.json を生成
-npm run push -w gas      # ビルドして clasp push（gas/.clasp.json は実装順序2で作成）
+npm run push -w gas      # ビルドして clasp push（GAS エディタ上のコードのみ更新）
+npm run deploy -w gas    # push して既存のWebアプリのデプロイを更新（URL は変わらない）
 ```
 
 CI（`.github/workflows/ci.yml`）は PR と main への push で lint・整形チェック・型チェック・テスト・ビルドを実行する。

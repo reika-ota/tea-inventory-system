@@ -15,3 +15,6 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Claude Code のローカル設定（開発サーバーの起動設定など、PC固有のパスを含む）
+.claude/
