@@ -2,18 +2,27 @@
 import type {
   Action,
   AdjustLotPayload,
+  Brand,
+  BrandVersionPayload,
   ConsumePayload,
+  CreateBrandPayload,
   GetAllData,
   LotVersionPayload,
   ReceiveLotPayload,
   StockContext,
   StockHistory,
-  StockResult,
+  DomainResult,
+  UpdateBrandPayload,
   UpdateLotPayload,
 } from '@chaicoss/shared';
 import {
   ERROR_MESSAGES,
   adjustLot,
+  checkBrandVersion,
+  createBrand,
+  deleteBrand,
+  restoreBrand,
+  updateBrand,
   checkLotVersion,
   consumeLot,
   depleteLot,
@@ -32,7 +41,7 @@ export interface FakeServer {
   handle(action: Action, payload: unknown): unknown;
 }
 
-function unwrap<T>(result: StockResult<T>): T {
+function unwrap<T>(result: DomainResult<T>): T {
   if (!result.ok) {
     throw new ApiCallError(result.code, ERROR_MESSAGES[result.code], undefined, result.current);
   }
@@ -104,6 +113,41 @@ export function createFakeServer(initial: GetAllData, histories: StockHistory[] 
           const lot = updateLotDates(lotOf(input), input, ctx());
           server.data.lots = server.data.lots.map((l) => (l.lotId === lot.lotId ? lot : l));
           return lot;
+        }
+        case 'createBrand': {
+          const brand = unwrap(
+            createBrand(server.data.genres, payload as CreateBrandPayload, ctx()),
+          );
+          server.data.brands.push(brand);
+          return brand;
+        }
+        case 'updateBrand':
+        case 'deleteBrand':
+        case 'restoreBrand': {
+          const input = payload as BrandVersionPayload;
+          const brand = unwrap(
+            checkBrandVersion(
+              server.data.brands.find((b) => b.brandId === input.brandId),
+              input.version,
+            ),
+          );
+          const updated: Brand = unwrap(
+            action === 'updateBrand'
+              ? updateBrand(
+                  brand,
+                  server.data.genres,
+                  server.data.lots,
+                  payload as UpdateBrandPayload,
+                  ctx(),
+                )
+              : action === 'deleteBrand'
+                ? deleteBrand(brand, server.data.lots, ctx())
+                : restoreBrand(brand, server.data.genres, ctx()),
+          );
+          server.data.brands = server.data.brands.map((b) =>
+            b.brandId === updated.brandId ? updated : b,
+          );
+          return updated;
         }
         default:
           throw new Error(`未対応の action: ${action}`);

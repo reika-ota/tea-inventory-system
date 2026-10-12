@@ -1,32 +1,17 @@
 // 在庫を増減する操作の計算（詳細設計 3.3・3.4）。
 // GAS（実際の更新）とフロントエンド（楽観的更新）の両方で使うため、純粋関数にする。
-import type {
-  ConsumePayload,
-  ErrorCode,
-  LotStockResult,
-  ReceiveLotPayload,
-  UpdateLotPayload,
-} from '../api';
-import type { Brand, IsoDateTime, Lot, StockHistory, StockReason } from '../types';
+import type { ConsumePayload, LotStockResult, ReceiveLotPayload, UpdateLotPayload } from '../api';
+import type { Brand, Lot, StockHistory, StockReason } from '../types';
 import { selectLotForConsume } from './lots';
+import type { DomainResult, UpdateContext } from './result';
+import { fail } from './result';
 import { fromTenths, multiplyQty, subtractQty, toTenths } from './quantity';
 
-/** 更新に使う情報（操作者・日時・操作ID・ID の採番） */
-export interface StockContext {
-  userEmail: string;
-  now: IsoDateTime;
-  opId: string;
-  newId: () => string;
-}
+/** 更新に使う情報（共通の UpdateContext と同じ） */
+export type StockContext = UpdateContext;
 
-/** 計算の結果。業務エラーの場合はエラーコードと、利用者に返す最新のロット */
-export type StockResult<T> = { ok: true; value: T } | { ok: false; code: ErrorCode; current?: Lot };
-
-const fail = (code: ErrorCode, current?: Lot): StockResult<never> => ({
-  ok: false,
-  code,
-  ...(current && { current }),
-});
+/** 計算の結果（共通の DomainResult と同じ。current はロット） */
+export type StockResult<T> = DomainResult<T>;
 
 /** 減らした量を履歴の増減量（負の数）にする（0 は 0 のまま） */
 function negate(qty: number): number {

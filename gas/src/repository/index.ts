@@ -40,6 +40,7 @@ export const appendOperation = (operation: OperationRecord) =>
   appendRows('operations', [operationToRow(operation)]);
 
 export const updateLot = (lot: Lot) => updateRow('lots', 'lot_id', lotToRow(lot));
+export const updateBrand = (brand: Brand) => updateRow('brands', 'brand_id', brandToRow(brand));
 
 /** 処理日時が before より前の操作ログを削除する（古い順に追記しているため先頭から消す） */
 export const deleteOperationsBefore = (before: string) =>

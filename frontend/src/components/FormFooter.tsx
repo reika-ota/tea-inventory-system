@@ -2,7 +2,14 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 
 /** 入力フォーム画面（SC-04／SC-05）の、画面下部に固定する確定ボタン（UI設計 1.1） */
-export function FormFooter({ label, pending }: { label: string; pending: boolean }) {
+interface FormFooterProps {
+  label: string;
+  /** 送信中に表示する文言 */
+  pendingLabel?: string;
+  pending: boolean;
+}
+
+export function FormFooter({ label, pendingLabel = '登録しています…', pending }: FormFooterProps) {
   return (
     <Box
       sx={{
@@ -25,7 +32,7 @@ export function FormFooter({ label, pending }: { label: string; pending: boolean
         disabled={pending}
         sx={{ height: 48 }}
       >
-        {pending ? '登録しています…' : label}
+        {pending ? pendingLabel : label}
       </Button>
     </Box>
   );

@@ -1,18 +1,22 @@
-// SC-03 銘柄詳細（UI設計 2.3）。銘柄の編集・削除は実装順序8-2で追加する
+// SC-03 銘柄詳細（UI設計 2.3）
 import type { Lot } from '@chaicoss/shared';
 import { toJstDate } from '@chaicoss/shared';
 import AddShoppingCart from '@mui/icons-material/AddShoppingCart';
+import Delete from '@mui/icons-material/Delete';
 import DoneAll from '@mui/icons-material/DoneAll';
+import Edit from '@mui/icons-material/Edit';
 import Event from '@mui/icons-material/Event';
 import LocalCafe from '@mui/icons-material/LocalCafe';
+import MoreVert from '@mui/icons-material/MoreVert';
 import Tune from '@mui/icons-material/Tune';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useStockMutating } from '../api/mutations';
 import { useAllData } from '../api/queries';
 import { AlertBadges } from '../components/AlertBadges';
@@ -25,6 +29,7 @@ import { TeaCup } from '../components/TeaCup';
 import { HistoryList } from '../features/brand/HistoryList';
 import { DepletedLotItem, LotItem } from '../features/brand/LotItem';
 import { buildBrandDetailView } from '../features/brand/brandDetailView';
+import { useBrandActions } from '../features/brand/useBrandActions';
 import { FALLBACK_COLOR } from '../features/inventory/BrandRow';
 import type { ConsumeTarget } from '../features/stock/ConsumePanel';
 import { ConsumePanel } from '../features/stock/ConsumePanel';
@@ -47,6 +52,10 @@ export function BrandDetailPage() {
   const [amountOpen, setAmountOpen] = useState(false);
   const [adjustingLot, setAdjustingLot] = useState<Lot | null>(null);
   const [datingLot, setDatingLot] = useState<Lot | null>(null);
+  const [brandMenuOpen, setBrandMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const navigate = useNavigate();
+  const brandActions = useBrandActions();
   const busy = useStockMutating();
   const form = data?.brands.find((b) => b.brandId === brandId)?.form;
   const actions = useStockActions(brandId, form);
@@ -99,7 +108,19 @@ export function BrandDetailPage() {
 
   return (
     <>
-      <AppHeader title={brand.name} back />
+      <AppHeader
+        title={brand.name}
+        back
+        actions={
+          <IconButton
+            aria-label="その他の操作"
+            onClick={() => setBrandMenuOpen(true)}
+            sx={{ width: 44, height: 44 }}
+          >
+            <MoreVert />
+          </IconButton>
+        }
+      />
       <Box component="main" sx={{ pb: 3 }}>
         {/* 概要 */}
         <Paper
@@ -230,7 +251,20 @@ export function BrandDetailPage() {
         )}
 
         {/* 情報 */}
-        <SectionTitle>情報</SectionTitle>
+        <SectionTitle
+          action={
+            <Button
+              size="small"
+              component={Link}
+              to={`/brands/${brand.brandId}/edit`}
+              startIcon={<Edit fontSize="small" />}
+            >
+              編集
+            </Button>
+          }
+        >
+          情報
+        </SectionTitle>
         <Paper component="dl" square elevation={0} sx={{ ...listSx, m: 0, px: 2, py: 0.5 }}>
           {[
             ['ジャンル', genre?.name ?? '—'],
@@ -270,6 +304,43 @@ export function BrandDetailPage() {
         <SectionTitle>履歴</SectionTitle>
         <HistoryList brandId={brand.brandId} form={brand.form} />
       </Box>
+
+      {/* 銘柄の操作メニュー */}
+      <BottomSheet
+        open={brandMenuOpen}
+        title={brand.name}
+        onClose={() => setBrandMenuOpen(false)}
+        items={[
+          {
+            icon: <Edit />,
+            label: '銘柄を編集',
+            onClick: () => navigate(`/brands/${brand.brandId}/edit`),
+          },
+          {
+            icon: <Delete />,
+            label: '銘柄を削除',
+            danger: true,
+            disabled: view.activeLots.length > 0,
+            reason: '在庫が残っているため削除できません',
+            onClick: () => setConfirmDelete(true),
+          },
+        ]}
+      />
+
+      {/* 銘柄の削除の確認 */}
+      <ConfirmDialog
+        open={confirmDelete}
+        title="銘柄を削除しますか？"
+        message={`「${brand.name}」を一覧から外します。設定の「削除した銘柄」から復元できます。`}
+        cancelLabel="キャンセル"
+        confirmLabel="削除する"
+        danger
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          brandActions.deleteBrand(brand);
+        }}
+      />
 
       {/* ロットの操作メニュー */}
       <BottomSheet

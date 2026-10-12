@@ -1,13 +1,16 @@
-// 在庫を変更する操作（詳細設計 7.3）：楽観的更新を行い、失敗したら元に戻す
+// 更新の操作（詳細設計 7.3）。在庫を変更する操作は楽観的更新を行い、失敗したら元に戻す
 import type {
   AdjustLotPayload,
+  BrandVersionPayload,
   ConsumePayload,
+  CreateBrandPayload,
   GetAllData,
   LotStockResult,
   Lot,
   LotVersionPayload,
   ReceiveLotPayload,
   StockHistory,
+  UpdateBrandPayload,
   UpdateLotPayload,
 } from '@chaicoss/shared';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -142,4 +145,37 @@ export function useUpdateLot() {
  */
 export function useStockMutating(): boolean {
   return useIsMutating({ mutationKey: STOCK_MUTATION_KEY }) > 0;
+}
+
+// ---- マスタ（銘柄・ジャンル）：楽観的更新を行わず、成功後に再取得する（詳細設計 7.3） ----
+
+function useMasterMutation<P, D>(call: (payload: P) => Promise<D>) {
+  const queryClient = useQueryClient();
+  const { notifyError } = useFeedback();
+  return useMutation({
+    mutationKey: ['master'],
+    mutationFn: call,
+    onError: (error) => notifyError(error),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.all }),
+  });
+}
+
+export function useCreateBrand() {
+  const callApi = useApi();
+  return useMasterMutation((payload: CreateBrandPayload) => callApi('createBrand', payload));
+}
+
+export function useUpdateBrand() {
+  const callApi = useApi();
+  return useMasterMutation((payload: UpdateBrandPayload) => callApi('updateBrand', payload));
+}
+
+export function useDeleteBrand() {
+  const callApi = useApi();
+  return useMasterMutation((payload: BrandVersionPayload) => callApi('deleteBrand', payload));
+}
+
+export function useRestoreBrand() {
+  const callApi = useApi();
+  return useMasterMutation((payload: BrandVersionPayload) => callApi('restoreBrand', payload));
 }

@@ -7,6 +7,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-d
 import { useAuth } from './auth/AuthContext';
 import { FeedbackProvider } from './feedback/FeedbackProvider';
 import { BrandDetailPage } from './pages/BrandDetailPage';
+import { BrandFormPage } from './pages/BrandFormPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { PurchasePage } from './pages/PurchasePage';
@@ -44,7 +45,9 @@ export function AppRoutes() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={guarded(<InventoryPage />)} />
+        <Route path="/brands/new" element={guarded(<BrandFormPage />)} />
         <Route path="/brands/:brandId" element={guarded(<BrandDetailPage />)} />
+        <Route path="/brands/:brandId/edit" element={guarded(<BrandFormPage />)} />
         <Route path="/brands/:brandId/purchase" element={guarded(<PurchasePage />)} />
         <Route path="/summary" element={guarded(<SummaryPage />)} />
         <Route path="/settings" element={guarded(<SettingsPage />)} />
