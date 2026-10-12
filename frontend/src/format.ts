@@ -1,4 +1,4 @@
-// 表示形式（UI設計 1.8・1.9、詳細設計 7.6）
+// 表示形式（UI設計 1.8・1.9、詳細設計 7.7）
 import type { Form, IsoDate, StockHistory, StockReason } from '@chaicoss/shared';
 import { daysBetween } from '@chaicoss/shared';
 
