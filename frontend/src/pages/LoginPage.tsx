@@ -8,7 +8,6 @@ import { APP_NAME } from '@chaicoss/shared';
 import { useEffect, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { TeaCup } from '../components/TeaCup';
 
 const REASON_MESSAGES = {
   forbidden: 'このアカウントは利用できません。登録済みの家族のアカウントでログインしてください。',
@@ -53,7 +52,14 @@ export function LoginPage() {
         gap: 1.25,
       }}
     >
-      <TeaCup color="#9a3f1c" ratio={0.6} size="lg" />
+      {/* アプリのアイコン（ホーム画面と同じ。UI設計 1.11）。装飾のため読み上げない */}
+      <Box
+        component="img"
+        src={`${import.meta.env.BASE_URL}favicon.svg`}
+        alt=""
+        aria-hidden
+        sx={{ width: 88, height: 88, borderRadius: '20px' }}
+      />
       <Typography component="h1" sx={{ fontSize: 28, fontWeight: 700, mt: 1 }}>
         {APP_NAME}
       </Typography>

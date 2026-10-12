@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.12 |
-| 作成日 | 2026-09-26（v1.12：2026-10-12） |
+| 版 | 1.13 |
+| 作成日 | 2026-09-26（v1.13：2026-10-12） |
 | フェーズ | 詳細設計 |
-| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.7） |
+| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.8） |
 
 本書はClaude Codeによる実装の入力資料とする。実装中に判明した事項は本書を更新してから反映する。
 
@@ -447,6 +447,7 @@ doPost(e)
 
 - `frontend/public/manifest.webmanifest` とアイコンを置き、index.html から読み込む（Vite が base のパスを付ける）
 - マニフェストのアイコンと start_url（`.`）はマニフェストの場所からの相対指定とし、GitHub Pages のパス（`/tea-inventory-system/`）に合わせる
+- SC-01 のアイコンは、同じアイコン（`favicon.svg`）を `import.meta.env.BASE_URL` 付きのパスで表示する
 - Service Worker（オフライン対応・キャッシュ）は導入しない。完了条件（ホーム画面から起動できる）はマニフェストとアイコンで満たし、データは常にサーバーから取得する
 
 ### 7.7 表示ルール
