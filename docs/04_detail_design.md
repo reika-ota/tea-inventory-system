@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.8 |
-| 作成日 | 2026-09-26（v1.8：2026-10-12） |
+| 版 | 1.9 |
+| 作成日 | 2026-09-26（v1.9：2026-10-12） |
 | フェーズ | 詳細設計 |
-| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.3） |
+| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.4） |
 
 本書はClaude Codeによる実装の入力資料とする。実装中に判明した事項は本書を更新してから反映する。
 
@@ -277,8 +277,19 @@ export interface ApiError {
 | `adjustLot(lot, remainingQty, ctx)` | 残量の修正：差分を ADJUST 履歴にする。差分0なら変更なし（history は null）。使い切りは LOT_DEPLETED |
 | `updateLotDates(lot, dates, ctx)` | 賞味期限・購入日の修正（履歴は記録しない） |
 
-- 業務エラーは例外ではなく `{ ok: false, code, current? }` で返し、GAS が AppError に変換する
-- ctx は操作者・日時・op_id・ID の採番関数（GAS では `Utilities.getUuid`）
+- 業務エラーは例外ではなく `{ ok: false, code, current? }`（domain/result.ts の DomainResult）で返し、GAS が AppError に変換する
+- ctx は操作者・日時・op_id・ID の採番関数（domain/result.ts の UpdateContext。GAS では `Utilities.getUuid`）
+
+銘柄マスタの更新の計算（domain/brand.ts）
+
+| 関数 | 内容 |
+|---|---|
+| `checkBrandVersion(brand, version)` | 銘柄の存在（NOT_FOUND）と版番号（VERSION_CONFLICT）の確認 |
+| `createBrand(genres, input, ctx)` | 銘柄の作成（ジャンルがなければ NOT_FOUND） |
+| `updateBrand(brand, genres, lots, input, ctx)` | 3.3 の銘柄の編集（ジャンルの確認、有効ロットがある場合の形態の変更は BRAND_HAS_ACTIVE_LOTS） |
+| `deleteBrand(brand, lots, ctx)` / `restoreBrand(brand, genres, ctx)` | 論理削除（有効ロットがあれば BRAND_HAS_ACTIVE_LOTS）・復元（ジャンルがなければ NOT_FOUND） |
+
+- 銘柄はマスタのため、更新しても在庫履歴は記録しない（操作ログ operations には記録する）
 
 定数（constants.ts）：`NEAR_EXPIRY_DAYS = 30`、`LOW_SERVINGS = 3`、`DEFAULT_SERVING = { LEAF: 3, BAG: 1 }`
 
@@ -384,6 +395,7 @@ doPost(e)
   - receiveLot は仮のロットを追加する。SC-05 は登録の成功後に SC-03 へ移る（失敗時は入力内容を残したままエラーを表示する）
   - updateLot は在庫が増減しないため楽観的更新を行わず、成功後に再取得する
 - マスタ系（ジャンル・銘柄）は楽観的更新を行わず、成功後に再取得する
+- 削除・使い切りの直後の「元に戻す」は、画面を移動した後に押されることがあるため、画面が閉じても結果を受け取れる `mutateAsync` で実行し、完了を通知する
 - VERSION_CONFLICT 時はダイアログ（「他の人が更新しました」「最新の内容を読み込みました。内容を確認して、もう一度操作してください。」）で通知し、`['all']` を再取得する
 - その他の API エラーはスナックバーでメッセージを表示する（認証エラーは SC-01 で案内するため表示しない）
 

@@ -1,14 +1,16 @@
 // SC-02 在庫一覧（UI設計 2.2）
 import type { AlertKind, Form } from '@chaicoss/shared';
 import { toJstDate } from '@chaicoss/shared';
+import Add from '@mui/icons-material/Add';
 import Box from '@mui/material/Box';
+import Fab from '@mui/material/Fab';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import NativeSelect from '@mui/material/NativeSelect';
 import Paper from '@mui/material/Paper';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAllData } from '../api/queries';
 import { ALERT_COLORS, ALERT_LABELS } from '../components/alertStyles';
 import { LoadError, Loading, SectionTitle } from '../components/QueryStatus';
@@ -226,6 +228,22 @@ export function InventoryPage() {
           </Paper>
         </>
       )}
+      {/* 右下の追加ボタン：SC-04（新規）へ */}
+      <Fab
+        component={Link}
+        to="/brands/new"
+        color="primary"
+        aria-label="銘柄を登録"
+        sx={{
+          position: 'fixed',
+          right: 'max(16px, calc(50vw - 224px))',
+          bottom: 84,
+          borderRadius: '16px',
+          zIndex: 20,
+        }}
+      >
+        <Add />
+      </Fab>
     </TabLayout>
   );
 }

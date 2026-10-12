@@ -30,11 +30,13 @@ export function useStockActions(brandId: string, form: Form | undefined) {
 
   const qty = (value: number) => formatQty(value, form ?? 'LEAF');
 
+  // 使い切りの直後に画面を移動してから「元に戻す」を押すこともあるため、画面が閉じても結果を受け取れる
+  // mutateAsync を使う（エラーの通知は mutation 側で行う）
   const restoreLot = (lot: Lot) =>
-    restore.mutate(
-      { lotId: lot.lotId, version: lot.version },
-      { onSuccess: () => notify('使い切りを取り消しました') },
-    );
+    restore
+      .mutateAsync({ lotId: lot.lotId, version: lot.version })
+      .then(() => notify('使い切りを取り消しました'))
+      .catch(() => undefined);
 
   const depleteLot = (lot: Lot, onDone?: () => void) =>
     deplete.mutate(

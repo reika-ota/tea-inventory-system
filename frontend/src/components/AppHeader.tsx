@@ -10,12 +10,14 @@ interface AppHeaderProps {
   title: string;
   /** 戻るボタンを表示する */
   back?: boolean;
+  /** 左端に置く部品（入力フォームの「閉じる」など）。back より優先する */
+  leading?: ReactNode;
   /** 右端の操作（その他メニューなど） */
   actions?: ReactNode;
 }
 
 /** 上部に固定表示するアプリバー（高さ56px、UI設計 1.1） */
-export function AppHeader({ title, back = false, actions }: AppHeaderProps) {
+export function AppHeader({ title, back = false, leading, actions }: AppHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -32,8 +34,9 @@ export function AppHeader({ title, back = false, actions }: AppHeaderProps) {
       elevation={0}
       sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
     >
-      <Toolbar disableGutters sx={{ minHeight: 56, px: back ? 0.5 : 2, gap: 0.5 }}>
-        {back && (
+      <Toolbar disableGutters sx={{ minHeight: 56, px: back || leading ? 0.5 : 2, gap: 0.5 }}>
+        {leading}
+        {back && !leading && (
           <IconButton aria-label="戻る" onClick={goBack} sx={{ width: 44, height: 44 }}>
             <ArrowBack />
           </IconButton>

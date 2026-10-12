@@ -3,15 +3,19 @@
 import {
   toJstDate,
   validateAdjustLot,
+  validateBrandVersion,
   validateConsume,
+  validateCreateBrand,
   validateLotVersion,
   validateReceiveLot,
+  validateUpdateBrand,
   validateUpdateLot,
 } from '@chaicoss/shared';
 import { authenticate } from './auth';
 import { runIdempotent } from './idempotency';
 import { withLock } from './lock';
 import { createRouter, parseWith } from './router';
+import { createBrand, deleteBrand, restoreBrand, updateBrand } from './services/brand';
 import { getAll, getHistories } from './services/query';
 import {
   adjustLot,
@@ -48,6 +52,10 @@ const handle = createRouter(
     },
     adjustLot: { parse: parseWith((p) => validateAdjustLot(p, 'LEAF')), run: adjustLot },
     updateLot: { parse: parseWith((p) => validateUpdateLot(p, today())), run: updateLot },
+    createBrand: { parse: parseWith(validateCreateBrand), run: createBrand },
+    updateBrand: { parse: parseWith(validateUpdateBrand), run: updateBrand },
+    deleteBrand: { parse: parseWith(validateBrandVersion), run: deleteBrand },
+    restoreBrand: { parse: parseWith(validateBrandVersion), run: restoreBrand },
   },
   {
     authenticate,
