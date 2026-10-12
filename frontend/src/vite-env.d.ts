@@ -10,3 +10,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** アプリのバージョン（ビルド時に frontend/package.json の version を埋め込む） */
+declare const __APP_VERSION__: string;

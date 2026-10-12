@@ -5,10 +5,13 @@ import {
   validateAdjustLot,
   validateBrandVersion,
   validateConsume,
+  validateCreateGenre,
+  validateDeleteGenre,
   validateCreateBrand,
   validateLotVersion,
   validateReceiveLot,
   validateUpdateBrand,
+  validateUpdateGenre,
   validateUpdateLot,
 } from '@chaicoss/shared';
 import { authenticate } from './auth';
@@ -16,6 +19,7 @@ import { runIdempotent } from './idempotency';
 import { withLock } from './lock';
 import { createRouter, parseWith } from './router';
 import { createBrand, deleteBrand, restoreBrand, updateBrand } from './services/brand';
+import { colorCodes, createGenre, deleteGenre, updateGenre } from './services/genre';
 import { getAll, getHistories } from './services/query';
 import {
   adjustLot,
@@ -56,6 +60,16 @@ const handle = createRouter(
     updateBrand: { parse: parseWith(validateUpdateBrand), run: updateBrand },
     deleteBrand: { parse: parseWith(validateBrandVersion), run: deleteBrand },
     restoreBrand: { parse: parseWith(validateBrandVersion), run: restoreBrand },
+    // ジャンルの色は色マスタにある色だけ（ロック前に色マスタを読んで確認する）
+    createGenre: {
+      parse: parseWith((p) => validateCreateGenre(p, colorCodes())),
+      run: createGenre,
+    },
+    updateGenre: {
+      parse: parseWith((p) => validateUpdateGenre(p, colorCodes())),
+      run: updateGenre,
+    },
+    deleteGenre: { parse: parseWith(validateDeleteGenre), run: deleteGenre },
   },
   {
     authenticate,

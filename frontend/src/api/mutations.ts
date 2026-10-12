@@ -4,6 +4,8 @@ import type {
   BrandVersionPayload,
   ConsumePayload,
   CreateBrandPayload,
+  CreateGenrePayload,
+  DeleteGenrePayload,
   GetAllData,
   LotStockResult,
   Lot,
@@ -11,6 +13,7 @@ import type {
   ReceiveLotPayload,
   StockHistory,
   UpdateBrandPayload,
+  UpdateGenrePayload,
   UpdateLotPayload,
 } from '@chaicoss/shared';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -178,4 +181,19 @@ export function useDeleteBrand() {
 export function useRestoreBrand() {
   const callApi = useApi();
   return useMasterMutation((payload: BrandVersionPayload) => callApi('restoreBrand', payload));
+}
+
+export function useCreateGenre() {
+  const callApi = useApi();
+  return useMasterMutation((payload: CreateGenrePayload) => callApi('createGenre', payload));
+}
+
+export function useUpdateGenre() {
+  const callApi = useApi();
+  return useMasterMutation((payload: UpdateGenrePayload) => callApi('updateGenre', payload));
+}
+
+export function useDeleteGenre() {
+  const callApi = useApi();
+  return useMasterMutation((payload: DeleteGenrePayload) => callApi('deleteGenre', payload));
 }

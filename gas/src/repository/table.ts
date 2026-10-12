@@ -62,6 +62,22 @@ export function updateRow(name: SheetName, idColumn: string, row: Row): void {
 }
 
 /**
+ * ID 列の値で行を特定して削除する（参照がないことを確認したマスタの行だけに使う）。
+ * 行が見つからない場合は想定外のエラーにする
+ */
+export function deleteRowById(name: SheetName, idColumn: string, id: string): void {
+  const sheet = getSheet(name);
+  const header = headerOf(sheet);
+  const idIndex = header.indexOf(idColumn);
+  const lastRow = sheet.getLastRow();
+  if (idIndex < 0 || lastRow < 2) throw new Error(`行がありません: ${name}.${idColumn}`);
+  const ids = sheet.getRange(2, idIndex + 1, lastRow - 1, 1).getValues();
+  const index = ids.findIndex(([value]) => String(value) === id);
+  if (index < 0) throw new Error(`行がありません: ${name}.${idColumn}=${id}`);
+  sheet.deleteRow(index + 2);
+}
+
+/**
  * 先頭（2行目）から、条件に合う行が続く間を削除する。削除した行数を返す。
  * 時系列に追記しているシート（operations）の古い行を消すために使う。
  */

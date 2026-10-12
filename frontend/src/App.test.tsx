@@ -35,11 +35,6 @@ describe('認証ガード', () => {
     renderApp({ pathname: '/login', state: { from: '/brands/kei' } });
     expect(await screen.findByRole('heading', { name: '桂花烏龍茶' })).toBeDefined();
   });
-
-  it('集計・設定タブは仮画面を表示する', () => {
-    renderApp('/settings');
-    expect(screen.getByText('ログイン中：taro@example.com')).toBeDefined();
-  });
 });
 
 describe('ログイン画面の案内', () => {

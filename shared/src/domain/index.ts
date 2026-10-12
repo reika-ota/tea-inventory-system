@@ -1,6 +1,7 @@
 export * from './alerts';
 export * from './brand';
 export * from './date';
+export * from './genre';
 export * from './lots';
 export * from './quantity';
 export * from './result';

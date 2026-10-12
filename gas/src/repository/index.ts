@@ -15,7 +15,7 @@ import {
   operationFromRow,
   operationToRow,
 } from './mapping';
-import { appendRows, deleteLeadingRows, readRows, updateRow } from './table';
+import { appendRows, deleteLeadingRows, deleteRowById, readRows, updateRow } from './table';
 
 export type { OperationRecord } from './mapping';
 export { ensureSheet, hasRows } from './table';
@@ -41,6 +41,8 @@ export const appendOperation = (operation: OperationRecord) =>
 
 export const updateLot = (lot: Lot) => updateRow('lots', 'lot_id', lotToRow(lot));
 export const updateBrand = (brand: Brand) => updateRow('brands', 'brand_id', brandToRow(brand));
+export const updateGenre = (genre: Genre) => updateRow('genres', 'genre_id', genreToRow(genre));
+export const deleteGenre = (genreId: string) => deleteRowById('genres', 'genre_id', genreId);
 
 /** 処理日時が before より前の操作ログを削除する（古い順に追記しているため先頭から消す） */
 export const deleteOperationsBefore = (before: string) =>
