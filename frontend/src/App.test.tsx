@@ -17,9 +17,9 @@ describe('認証ガード', () => {
     renderApp('/', auth);
     expect(screen.getByRole('heading', { name: 'Chaicoss' })).toBeDefined();
     expect(auth.renderSignInButton).toHaveBeenCalled();
-    // ホーム画面と同じアプリのアイコンを表示する（装飾のため代替テキストなし）
+    // アプリのアイコンの背景透過版を表示する（装飾のため代替テキストなし）
     const icon = document.querySelector('main img');
-    expect(icon?.getAttribute('src')).toBe(`${import.meta.env.BASE_URL}favicon.svg`);
+    expect(icon?.getAttribute('src')).toBe(`${import.meta.env.BASE_URL}icon-transparent.svg`);
     expect(icon?.getAttribute('alt')).toBe('');
   });
 

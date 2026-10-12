@@ -52,13 +52,13 @@ export function LoginPage() {
         gap: 1.25,
       }}
     >
-      {/* アプリのアイコン（ホーム画面と同じ。UI設計 1.11）。装飾のため読み上げない */}
+      {/* アプリのアイコンの背景透過版（UI設計 1.11）。装飾のため読み上げない */}
       <Box
         component="img"
-        src={`${import.meta.env.BASE_URL}favicon.svg`}
+        src={`${import.meta.env.BASE_URL}icon-transparent.svg`}
         alt=""
         aria-hidden
-        sx={{ width: 88, height: 88, borderRadius: '20px' }}
+        sx={{ width: 88, height: 88 }}
       />
       <Typography component="h1" sx={{ fontSize: 28, fontWeight: 700, mt: 1 }}>
         {APP_NAME}
