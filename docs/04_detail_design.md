@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.7 |
-| 作成日 | 2026-09-26（v1.7：2026-10-12） |
+| 版 | 1.8 |
+| 作成日 | 2026-09-26（v1.8：2026-10-12） |
 | フェーズ | 詳細設計 |
-| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.2） |
+| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.3） |
 
 本書はClaude Codeによる実装の入力資料とする。実装中に判明した事項は本書を更新してから反映する。
 
@@ -273,6 +273,9 @@ export interface ApiError {
 | `consumeLot(plan, ctx)` | 残量を減らし、版番号を上げ、CONSUME 履歴を作る |
 | `checkLotVersion(lot, version)` | ロットの存在（NOT_FOUND）と版番号（VERSION_CONFLICT）の確認 |
 | `depleteLot(lot, ctx)` / `restoreLot(lot, histories, ctx)` | 3.3 の使い切り・使い切りの取り消し（LOT_DEPLETED・LOT_NOT_DEPLETED の判定） |
+| `receiveLot(brand, input, ctx)` | 購入登録：ロットを作り IN 履歴を作る（削除済みの銘柄は NOT_FOUND） |
+| `adjustLot(lot, remainingQty, ctx)` | 残量の修正：差分を ADJUST 履歴にする。差分0なら変更なし（history は null）。使い切りは LOT_DEPLETED |
+| `updateLotDates(lot, dates, ctx)` | 賞味期限・購入日の修正（履歴は記録しない） |
 
 - 業務エラーは例外ではなく `{ ok: false, code, current? }` で返し、GAS が AppError に変換する
 - ctx は操作者・日時・op_id・ID の採番関数（GAS では `Utilities.getUuid`）
@@ -297,7 +300,7 @@ doPost(e)
 
 - 想定外の例外は捕捉して INTERNAL_ERROR を返し、詳細は `console.error` に出力する
 - 更新系は opId（空でない文字列）が必須。なければ VALIDATION_ERROR
-- 更新系の入力チェックはロックの前に行う。形態によって条件が変わる項目（consume の量）は、ロック前は茶葉の条件（ティーバッグの条件を含む）で確認し、ロック後に銘柄を読んでからティーバッグの条件を確認する
+- 更新系の入力チェックはロックの前に行う。形態によって条件が変わる項目（consume の量、receiveLot の購入量、adjustLot の残量）は、ロック前は茶葉の条件（ティーバッグの条件を含む）で確認し、ロック後に銘柄を読んでからティーバッグの条件を確認する。購入日の「当日以前」は GAS の当日（JST）で確認する
 - 版の確認・業務処理・履歴の記録は各処理（services）が、ロックと op_id の確認・操作ログの記録は共通処理が行う
 
 ### 6.2 認証（auth.ts）
@@ -378,6 +381,8 @@ doPost(e)
   - 書き換えの計算は shared/domain/stock.ts を使う（サーバーと同じ結果になる）。restoreLot は戻す量を履歴から求めるため、`['histories', brandId]` を取得済みの場合だけ書き換える
   - 在庫を変更する操作の実行中は、在庫の操作ボタンを無効にする（連打の防止と、前の操作の完了前に次の操作を送ることによる版番号の食い違いの防止）
   - consume は「このロットから飲む」で指定した場合だけ lotId を送る（指定なしはサーバーの引当ルールで決める）
+  - receiveLot は仮のロットを追加する。SC-05 は登録の成功後に SC-03 へ移る（失敗時は入力内容を残したままエラーを表示する）
+  - updateLot は在庫が増減しないため楽観的更新を行わず、成功後に再取得する
 - マスタ系（ジャンル・銘柄）は楽観的更新を行わず、成功後に再取得する
 - VERSION_CONFLICT 時はダイアログ（「他の人が更新しました」「最新の内容を読み込みました。内容を確認して、もう一度操作してください。」）で通知し、`['all']` を再取得する
 - その他の API エラーはスナックバーでメッセージを表示する（認証エラーは SC-01 で案内するため表示しない）

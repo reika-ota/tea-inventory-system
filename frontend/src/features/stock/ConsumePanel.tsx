@@ -2,6 +2,7 @@
 import type { Brand, Lot } from '@chaicoss/shared';
 import { maxServingsForLot, multiplyQty } from '@chaicoss/shared';
 import Add from '@mui/icons-material/Add';
+import AddShoppingCart from '@mui/icons-material/AddShoppingCart';
 import Remove from '@mui/icons-material/Remove';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -9,6 +10,7 @@ import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { formatBestBeforeShort, formatQty } from '../../format';
 
 /** 消費の対象ロット。pinned はロットを指定している場合 */
@@ -59,9 +61,20 @@ export function ConsumePanel({
   if (!target) {
     return (
       <Panel>
-        <Box sx={{ py: 1, textAlign: 'center', color: 'text.secondary', fontSize: 14 }}>
+        <Box sx={{ pt: 1, pb: 1.5, textAlign: 'center', color: 'text.secondary', fontSize: 14 }}>
           在庫がありません
         </Box>
+        <Button
+          component={Link}
+          to={`/brands/${brand.brandId}/purchase`}
+          variant="contained"
+          fullWidth
+          disableElevation
+          startIcon={<AddShoppingCart />}
+          sx={{ height: 56, fontSize: 17, borderRadius: '12px' }}
+        >
+          再購入を登録
+        </Button>
       </Panel>
     );
   }

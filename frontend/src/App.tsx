@@ -9,6 +9,7 @@ import { FeedbackProvider } from './feedback/FeedbackProvider';
 import { BrandDetailPage } from './pages/BrandDetailPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
+import { PurchasePage } from './pages/PurchasePage';
 import { SettingsPage, SummaryPage } from './pages/PlaceholderPages';
 
 /**
@@ -44,6 +45,7 @@ export function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={guarded(<InventoryPage />)} />
         <Route path="/brands/:brandId" element={guarded(<BrandDetailPage />)} />
+        <Route path="/brands/:brandId/purchase" element={guarded(<PurchasePage />)} />
         <Route path="/summary" element={guarded(<SummaryPage />)} />
         <Route path="/settings" element={guarded(<SettingsPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />

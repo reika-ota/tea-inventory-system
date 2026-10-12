@@ -1,18 +1,22 @@
 // 楽観的更新（詳細設計 7.3）：サーバーの応答を待たずに、キャッシュ上の在庫を先に書き換える。
 // 計算はサーバーと同じ shared の関数を使うため、成功すれば応答と同じ結果になる。
 import type {
+  AdjustLotPayload,
   ConsumePayload,
   GetAllData,
   Lot,
   LotVersionPayload,
+  ReceiveLotPayload,
   StockContext,
   StockHistory,
 } from '@chaicoss/shared';
 import {
+  adjustLot,
   checkLotVersion,
   consumeLot,
   depleteLot,
   planConsume,
+  receiveLot,
   restoreLot,
   toJstDateTime,
 } from '@chaicoss/shared';
@@ -75,5 +79,31 @@ export function applyRestore(
   );
   if (!checked.ok) return data;
   const result = restoreLot(checked.value, histories, optimisticContext(userEmail));
+  return result.ok ? replaceLot(data, result.value.lot) : data;
+}
+
+/** 購入登録：仮のロットを追加する（ロット ID などはサーバーの応答で置き換わる） */
+export function applyReceive(
+  data: GetAllData,
+  input: ReceiveLotPayload,
+  userEmail: string,
+): GetAllData {
+  const brand = data.brands.find((b) => b.brandId === input.brandId);
+  const result = receiveLot(brand, input, optimisticContext(userEmail));
+  return result.ok ? { ...data, lots: [...data.lots, result.value.lot] } : data;
+}
+
+/** 残量の修正 */
+export function applyAdjust(
+  data: GetAllData,
+  input: AdjustLotPayload,
+  userEmail: string,
+): GetAllData {
+  const checked = checkLotVersion(
+    data.lots.find((l) => l.lotId === input.lotId),
+    input.version,
+  );
+  if (!checked.ok) return data;
+  const result = adjustLot(checked.value, input.remainingQty, optimisticContext(userEmail));
   return result.ok ? replaceLot(data, result.value.lot) : data;
 }

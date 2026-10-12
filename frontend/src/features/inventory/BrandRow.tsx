@@ -1,4 +1,6 @@
+import AddShoppingCart from '@mui/icons-material/AddShoppingCart';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import { Link } from 'react-router-dom';
 import { AlertBadges } from '../../components/AlertBadges';
@@ -60,32 +62,52 @@ export function BrandRow({ summary }: { summary: BrandSummary }) {
   );
 }
 
-/** 在庫なし枠の行。タップで SC-03 へ（再購入ボタンは実装順序8で追加する） */
+/** 在庫なし枠の行。銘柄名のタップで SC-03、「再購入」で SC-05 へ */
 export function NoStockRow({ summary }: { summary: BrandSummary }) {
   const { brand, genre } = summary;
   return (
-    <ButtonBase
-      component={Link}
-      to={`/brands/${brand.brandId}`}
+    <Box
       sx={{
-        width: '100%',
         display: 'flex',
-        gap: 1.5,
         alignItems: 'center',
-        justifyContent: 'flex-start',
-        textAlign: 'left',
-        px: 2,
-        py: 1.5,
+        gap: 1,
+        pr: 2,
         borderBottom: 1,
         borderColor: 'divider',
         '&:last-of-type': { borderBottom: 0 },
       }}
     >
-      <TeaCup color={genre?.color ?? FALLBACK_COLOR} ratio={0} />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ fontWeight: 700, ...ellipsis }}>{brand.name}</Box>
-        <Box sx={{ fontSize: 12, color: 'text.secondary', ...ellipsis }}>{genre?.name}</Box>
-      </Box>
-    </ButtonBase>
+      <ButtonBase
+        component={Link}
+        to={`/brands/${brand.brandId}`}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          gap: 1.5,
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          textAlign: 'left',
+          pl: 2,
+          py: 1.5,
+        }}
+      >
+        <TeaCup color={genre?.color ?? FALLBACK_COLOR} ratio={0} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ fontWeight: 700, ...ellipsis }}>{brand.name}</Box>
+          <Box sx={{ fontSize: 12, color: 'text.secondary', ...ellipsis }}>{genre?.name}</Box>
+        </Box>
+      </ButtonBase>
+      <Button
+        component={Link}
+        to={`/brands/${brand.brandId}/purchase`}
+        variant="outlined"
+        size="small"
+        startIcon={<AddShoppingCart fontSize="small" />}
+        sx={{ flex: 'none' }}
+      >
+        再購入
+      </Button>
+    </Box>
   );
 }
