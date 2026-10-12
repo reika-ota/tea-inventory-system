@@ -79,10 +79,14 @@ function SummaryContent({ data }: { data: GetAllData }) {
               aria-disabled={!hasStock}
               sx={{
                 width: '100%',
-                display: 'flex',
-                gap: 1.5,
+                // 1段目：色の点・ジャンル名・数量、2段目：バー（ジャンル名の列から右端まで）。
+                // バーを数量の列の下まで広げ、数量の文字の長さによらず全行でバーの長さの基準をそろえる
+                display: 'grid',
+                gridTemplateColumns: '14px minmax(0, 1fr) auto',
+                columnGap: 1.5,
+                rowGap: 0.75,
                 alignItems: 'center',
-                justifyContent: 'flex-start',
+                justifyItems: 'stretch',
                 textAlign: 'left',
                 px: 2,
                 py: 1.5,
@@ -94,47 +98,21 @@ function SummaryContent({ data }: { data: GetAllData }) {
             >
               <Box
                 aria-hidden
-                sx={{
-                  flex: 'none',
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  bgcolor: genre.color,
-                }}
+                sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: genre.color }}
               />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ minWidth: 0 }}>
                 <Box sx={{ fontWeight: 700 }}>{genre.name}</Box>
                 <Box sx={{ fontSize: 12, color: 'text.secondary' }}>
                   {hasStock ? `${count}銘柄` : '在庫なし'}
                 </Box>
-                {leafQty > 0 && (
-                  <Box
-                    role="presentation"
-                    sx={{
-                      height: 6,
-                      borderRadius: '3px',
-                      bgcolor: 'background.default',
-                      mt: 0.75,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        height: '100%',
-                        width: `${Math.round((leafQty / maxLeaf) * 100)}%`,
-                        bgcolor: genre.color,
-                      }}
-                    />
-                  </Box>
-                )}
               </Box>
               <Box
                 sx={{
-                  flex: 'none',
                   textAlign: 'right',
                   fontSize: 12,
                   color: 'text.secondary',
                   lineHeight: 1.6,
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {leafQty > 0 && (
@@ -156,6 +134,26 @@ function SummaryContent({ data }: { data: GetAllData }) {
                   </div>
                 )}
               </Box>
+              {leafQty > 0 && (
+                <Box
+                  role="presentation"
+                  sx={{
+                    gridColumn: '2 / 4',
+                    height: 6,
+                    borderRadius: '3px',
+                    bgcolor: 'background.default',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      height: '100%',
+                      width: `${Math.round((leafQty / maxLeaf) * 100)}%`,
+                      bgcolor: genre.color,
+                    }}
+                  />
+                </Box>
+              )}
             </ButtonBase>
           );
         })}
