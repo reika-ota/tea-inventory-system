@@ -2,8 +2,8 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.6 |
-| 作成日 | 2026-09-26（v1.6：2026-09-27） |
+| 版 | 1.7 |
+| 作成日 | 2026-09-26（v1.7：2026-10-12） |
 | フェーズ | 詳細設計 |
 | 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.2） |
 
@@ -265,6 +265,18 @@ export interface ApiError {
 | `nearestBestBefore(lots, brand)` | 有効ロットの最も近い賞味期限（SC-02 の行、期限が近い順の並び替え） |
 | `toJstDate(date)` / `toJstDateTime(date)` | JST の日付・日時の文字列。当日の判定（フロントエンド）と記録日時（GAS）に使う |
 
+在庫の増減の計算（domain/stock.ts）：GAS の更新処理とフロントエンドの楽観的更新の両方で使う
+
+| 関数 | 内容 |
+|---|---|
+| `planConsume(brand, lots, input)` | 3.4 の 2〜5（対象ロットと量の決定、NOT_FOUND・NO_ACTIVE_LOT・LOT_DEPLETED・INSUFFICIENT_STOCK の判定） |
+| `consumeLot(plan, ctx)` | 残量を減らし、版番号を上げ、CONSUME 履歴を作る |
+| `checkLotVersion(lot, version)` | ロットの存在（NOT_FOUND）と版番号（VERSION_CONFLICT）の確認 |
+| `depleteLot(lot, ctx)` / `restoreLot(lot, histories, ctx)` | 3.3 の使い切り・使い切りの取り消し（LOT_DEPLETED・LOT_NOT_DEPLETED の判定） |
+
+- 業務エラーは例外ではなく `{ ok: false, code, current? }` で返し、GAS が AppError に変換する
+- ctx は操作者・日時・op_id・ID の採番関数（GAS では `Utilities.getUuid`）
+
 定数（constants.ts）：`NEAR_EXPIRY_DAYS = 30`、`LOW_SERVINGS = 3`、`DEFAULT_SERVING = { LEAF: 3, BAG: 1 }`
 
 ---
@@ -284,6 +296,9 @@ doPost(e)
 ```
 
 - 想定外の例外は捕捉して INTERNAL_ERROR を返し、詳細は `console.error` に出力する
+- 更新系は opId（空でない文字列）が必須。なければ VALIDATION_ERROR
+- 更新系の入力チェックはロックの前に行う。形態によって条件が変わる項目（consume の量）は、ロック前は茶葉の条件（ティーバッグの条件を含む）で確認し、ロック後に銘柄を読んでからティーバッグの条件を確認する
+- 版の確認・業務処理・履歴の記録は各処理（services）が、ロックと op_id の確認・操作ログの記録は共通処理が行う
 
 ### 6.2 認証（auth.ts）
 
@@ -296,7 +311,7 @@ doPost(e)
 
 ### 6.3 排他（lock.ts）
 
-- `LockService.getScriptLock()`、`waitLock(10000)`。取得失敗は LOCK_TIMEOUT
+- `LockService.getScriptLock()`、`tryLock(10000)`。取得できなければ LOCK_TIMEOUT
 - 処理後は finally で `releaseLock()`、書き込み後に `SpreadsheetApp.flush()`
 
 ### 6.4 冪等性（idempotency.ts）
@@ -320,7 +335,8 @@ doPost(e)
 |---|---|---|
 | `setupSheets()` | 6シートの作成、ヘッダー・書式設定 | GASエディタから手動実行（初回） |
 | `seedInitialData()` | 色11件・ジャンル7件・銘柄14件・ロット14件の投入（01_requirements 5.1、05_ui_design 1.6）。データがあるシートがあれば中止する | GASエディタから手動実行（初回） |
-| `purgeOperations()` | 30日より古い operations の行を削除 | 時間主導トリガー（毎日） |
+| `purgeOperations()` | 30日より古い operations の行を削除（ロックを取って行う） | 時間主導トリガー（毎日3時台） |
+| `installTriggers()` | purgeOperations のトリガーを設定（何度実行しても1つ） | GASエディタから手動実行（初回） |
 
 - stock_histories は削除しない（想定：1日数件、年数千行で問題なし）
 - 初期データのロットは、購入日を棚卸し日（2026-09-26）、賞味期限を未入力とする。購入量が分かる銘柄は購入量、分からない銘柄は残量と同じ値とする
@@ -359,8 +375,12 @@ doPost(e)
 | `['histories', brandId]` | getHistories | SC-03 表示時に取得 |
 
 - 在庫を変更する更新系（consume, adjustLot, depleteLot, restoreLot, receiveLot）は楽観的更新を行う：`onMutate` で `['all']` のキャッシュを書き換え、`onError` で元に戻し、`onSettled` で `['all']` と該当 `['histories', brandId]` を再取得する
+  - 書き換えの計算は shared/domain/stock.ts を使う（サーバーと同じ結果になる）。restoreLot は戻す量を履歴から求めるため、`['histories', brandId]` を取得済みの場合だけ書き換える
+  - 在庫を変更する操作の実行中は、在庫の操作ボタンを無効にする（連打の防止と、前の操作の完了前に次の操作を送ることによる版番号の食い違いの防止）
+  - consume は「このロットから飲む」で指定した場合だけ lotId を送る（指定なしはサーバーの引当ルールで決める）
 - マスタ系（ジャンル・銘柄）は楽観的更新を行わず、成功後に再取得する
-- VERSION_CONFLICT 時はダイアログで通知し、`['all']` を再取得する
+- VERSION_CONFLICT 時はダイアログ（「他の人が更新しました」「最新の内容を読み込みました。内容を確認して、もう一度操作してください。」）で通知し、`['all']` を再取得する
+- その他の API エラーはスナックバーでメッセージを表示する（認証エラーは SC-01 で案内するため表示しない）
 
 ### 7.4 ルーティング
 
