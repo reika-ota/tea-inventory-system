@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { makeBrand, makeLot } from '../test/fixtures';
 import type { StockHistory } from '../types';
 import type { StockContext } from './stock';
-import { checkLotVersion, consumeLot, depleteLot, planConsume, restoreLot } from './stock';
+import {
+  adjustLot,
+  checkLotVersion,
+  consumeLot,
+  depleteLot,
+  planConsume,
+  receiveLot,
+  restoreLot,
+  updateLotDates,
+} from './stock';
 
 const ctx: StockContext = {
   userEmail: 'hanako@example.com',
@@ -208,5 +217,89 @@ describe('restoreLot', () => {
 
   it('使い切りでなければ LOT_NOT_DEPLETED', () => {
     expect(restoreLot(sooner, [], ctx)).toMatchObject({ ok: false, code: 'LOT_NOT_DEPLETED' });
+  });
+});
+
+describe('receiveLot', () => {
+  const input = { brandId: 'b1', qty: 50, bestBefore: '2027-03-31', purchasedOn: '2026-10-12' };
+
+  it('購入量で新しいロットを作り、IN として記録する', () => {
+    const result = receiveLot(brand, input, ctx);
+    expect(result.ok && result.value.lot).toEqual({
+      lotId: 'h-new',
+      brandId: 'b1',
+      initialQty: 50,
+      remainingQty: 50,
+      bestBefore: '2027-03-31',
+      purchasedOn: '2026-10-12',
+      isDepleted: false,
+      depletedAt: null,
+      version: 1,
+      createdAt: ctx.now,
+      createdBy: ctx.userEmail,
+      updatedAt: ctx.now,
+      updatedBy: ctx.userEmail,
+    });
+    expect(result.ok && result.value.history).toMatchObject({
+      delta: 50,
+      qtyAfter: 50,
+      reason: 'IN',
+      opId: 'op-1',
+    });
+  });
+
+  it('賞味期限は省略できる（null）', () => {
+    const result = receiveLot(brand, { brandId: 'b1', qty: 8, purchasedOn: '2026-10-12' }, ctx);
+    expect(result.ok && result.value.lot.bestBefore).toBeNull();
+  });
+
+  it('銘柄がない・削除済みなら NOT_FOUND', () => {
+    expect(receiveLot(undefined, input, ctx)).toMatchObject({ ok: false, code: 'NOT_FOUND' });
+    expect(receiveLot(makeBrand({ isDeleted: true }), input, ctx)).toMatchObject({
+      ok: false,
+      code: 'NOT_FOUND',
+    });
+  });
+});
+
+describe('adjustLot', () => {
+  it('新しい残量との差分を ADJUST として記録する（減る場合・増える場合）', () => {
+    const down = adjustLot(sooner, 7.5, ctx);
+    expect(down.ok && down.value.lot).toMatchObject({ remainingQty: 7.5, version: 5 });
+    expect(down.ok && down.value.history).toMatchObject({
+      delta: -2.5,
+      qtyAfter: 7.5,
+      reason: 'ADJUST',
+    });
+    const up = adjustLot(sooner, 12, ctx);
+    expect(up.ok && up.value.history?.delta).toBe(2);
+  });
+
+  it('残量0にもできる（使い切りにはしない）', () => {
+    const result = adjustLot(sooner, 0, ctx);
+    expect(result.ok && result.value.lot).toMatchObject({ remainingQty: 0, isDepleted: false });
+  });
+
+  it('変更がなければロットをそのまま返し、履歴は null', () => {
+    expect(adjustLot(sooner, 10, ctx)).toEqual({ ok: true, value: { lot: sooner, history: null } });
+  });
+
+  it('使い切りのロットは LOT_DEPLETED', () => {
+    expect(adjustLot(makeLot({ isDepleted: true }), 5, ctx)).toMatchObject({
+      ok: false,
+      code: 'LOT_DEPLETED',
+    });
+  });
+});
+
+describe('updateLotDates', () => {
+  it('賞味期限・購入日を書き換え、版番号を上げる。賞味期限の省略は未入力（null）', () => {
+    expect(updateLotDates(sooner, { purchasedOn: '2026-09-01' }, ctx)).toMatchObject({
+      bestBefore: null,
+      purchasedOn: '2026-09-01',
+      version: 5,
+      updatedAt: ctx.now,
+      remainingQty: 10,
+    });
   });
 });

@@ -1,7 +1,7 @@
 import type { GetAllData, StockHistory } from '@chaicoss/shared';
 import { makeBrand, makeLot } from '@chaicoss/shared/testing';
 import { describe, expect, it } from 'vitest';
-import { applyConsume, applyDeplete, applyRestore } from './optimistic';
+import { applyAdjust, applyConsume, applyDeplete, applyReceive, applyRestore } from './optimistic';
 
 const email = 'taro@example.com';
 const data: GetAllData = {
@@ -67,5 +67,29 @@ describe('applyRestore', () => {
 
   it('履歴を取得していなければ書き換えない', () => {
     expect(applyRestore(data, { lotId: 'd', version: 5 }, undefined, email)).toBe(data);
+  });
+});
+
+describe('applyReceive', () => {
+  it('仮のロットを追加する', () => {
+    const next = applyReceive(data, { brandId: 'b1', qty: 50, purchasedOn: '2026-10-12' }, email);
+    expect(next.lots).toHaveLength(4);
+    expect(next.lots[3]).toMatchObject({ brandId: 'b1', initialQty: 50, remainingQty: 50 });
+  });
+
+  it('銘柄がなければ書き換えない', () => {
+    const input = { brandId: 'x', qty: 50, purchasedOn: '2026-10-12' };
+    expect(applyReceive(data, input, email)).toBe(data);
+  });
+});
+
+describe('applyAdjust', () => {
+  it('残量を書き換える', () => {
+    const next = applyAdjust(data, { lotId: 'a', version: 2, remainingQty: 7 }, email);
+    expect(lot(next, 'a')).toMatchObject({ remainingQty: 7, version: 3 });
+  });
+
+  it('版番号が違う場合は書き換えない', () => {
+    expect(applyAdjust(data, { lotId: 'a', version: 1, remainingQty: 7 }, email)).toBe(data);
   });
 });

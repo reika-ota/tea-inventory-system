@@ -1,22 +1,37 @@
-// 在庫の増減（consume・depleteLot・restoreLot）。計算は shared の純粋関数で行い、ここではシートの読み書きをする
+// ロットの更新（consume・depleteLot・restoreLot・receiveLot・adjustLot・updateLot）。計算は shared の純粋関数で行い、ここではシートの読み書きをする
 import type {
+  AdjustLotPayload,
   ConsumePayload,
+  Lot,
   LotStockResult,
   LotVersionPayload,
+  ReceiveLotPayload,
   StockContext,
+  StockHistory,
   StockResult,
+  UpdateLotPayload,
 } from '@chaicoss/shared';
 import {
+  adjustLot as adjustLotRule,
   checkLotVersion,
   checkQuantity,
   consumeLot,
   depleteLot as depleteLotRule,
   planConsume,
+  receiveLot as receiveLotRule,
   restoreLot as restoreLotRule,
   toJstDateTime,
+  updateLotDates,
 } from '@chaicoss/shared';
 import { AppError } from '../errors';
-import { appendHistories, readBrands, readHistories, readLots, updateLot } from '../repository';
+import {
+  appendHistories,
+  appendLots,
+  readBrands,
+  readHistories,
+  readLots,
+  updateLot as updateLotRow,
+} from '../repository';
 import type { MutationContext } from '../router';
 
 function stockContext(ctx: MutationContext): StockContext {
@@ -38,7 +53,7 @@ function unwrap<T>(result: StockResult<T>): T {
 
 /** ロットの更新と履歴の追加（在庫の増減は必ず履歴に残す） */
 function save(result: LotStockResult): LotStockResult {
-  updateLot(result.lot);
+  updateLotRow(result.lot);
   appendHistories([result.history]);
   return result;
 }
@@ -76,4 +91,54 @@ export function restoreLot(input: LotVersionPayload, ctx: MutationContext): LotS
     ),
   );
   return save(unwrap(restoreLotRule(lot, readHistories(), stockContext(ctx))));
+}
+
+/** ティーバッグの数量（整数）を確認する（ロック前は茶葉の条件で確認しているため） */
+function checkBagQuantity(field: string, value: number, options: { allowZero?: boolean } = {}) {
+  const checked = checkQuantity(value, 'BAG', options);
+  if (!checked.ok)
+    throw new AppError('VALIDATION_ERROR', { fieldErrors: { [field]: checked.error } });
+}
+
+/** 購入登録：ロットを作り、購入量を IN として記録する */
+export function receiveLot(input: ReceiveLotPayload, ctx: MutationContext): Lot {
+  const brand = readBrands().find((b) => b.brandId === input.brandId);
+  if (brand?.form === 'BAG') checkBagQuantity('qty', input.qty);
+  const result = unwrap(receiveLotRule(brand, input, stockContext(ctx)));
+  appendLots([result.lot]);
+  appendHistories([result.history]);
+  return result.lot;
+}
+
+/** 残量の修正：差分を ADJUST として記録する（変更がなければ記録しない） */
+export function adjustLot(
+  input: AdjustLotPayload,
+  ctx: MutationContext,
+): { lot: Lot; history: StockHistory | null } {
+  const lots = readLots();
+  const lot = unwrap(
+    checkLotVersion(
+      lots.find((l) => l.lotId === input.lotId),
+      input.version,
+    ),
+  );
+  const brand = readBrands().find((b) => b.brandId === lot.brandId);
+  if (brand?.form === 'BAG')
+    checkBagQuantity('remainingQty', input.remainingQty, { allowZero: true });
+  const result = unwrap(adjustLotRule(lot, input.remainingQty, stockContext(ctx)));
+  if (result.history) save({ lot: result.lot, history: result.history });
+  return result;
+}
+
+/** 賞味期限・購入日の修正（在庫は増減しないため履歴は記録しない） */
+export function updateLot(input: UpdateLotPayload, ctx: MutationContext): Lot {
+  const lot = unwrap(
+    checkLotVersion(
+      readLots().find((l) => l.lotId === input.lotId),
+      input.version,
+    ),
+  );
+  const updated = updateLotDates(lot, input, stockContext(ctx));
+  updateLotRow(updated);
+  return updated;
 }

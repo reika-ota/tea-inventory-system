@@ -1,6 +1,12 @@
 // 在庫を増減する操作の計算（詳細設計 3.3・3.4）。
 // GAS（実際の更新）とフロントエンド（楽観的更新）の両方で使うため、純粋関数にする。
-import type { ConsumePayload, ErrorCode, LotStockResult } from '../api';
+import type {
+  ConsumePayload,
+  ErrorCode,
+  LotStockResult,
+  ReceiveLotPayload,
+  UpdateLotPayload,
+} from '../api';
 import type { Brand, IsoDateTime, Lot, StockHistory, StockReason } from '../types';
 import { selectLotForConsume } from './lots';
 import { fromTenths, multiplyQty, subtractQty, toTenths } from './quantity';
@@ -152,4 +158,59 @@ export function restoreLot(
     ok: true,
     value: { lot: updated, history: history(updated, restored, 'RESTORE', null, ctx) },
   };
+}
+
+// ---- 購入登録（receiveLot）・残量の修正（adjustLot）・日付の修正（updateLot） ----
+
+/** 購入登録：新しいロットを作り、購入量を IN として記録する。削除済みの銘柄は NOT_FOUND */
+export function receiveLot(
+  brand: Brand | undefined,
+  input: ReceiveLotPayload,
+  ctx: StockContext,
+): StockResult<LotStockResult> {
+  if (!brand || brand.isDeleted) return fail('NOT_FOUND');
+  const lot: Lot = {
+    lotId: ctx.newId(),
+    brandId: brand.brandId,
+    initialQty: input.qty,
+    remainingQty: input.qty,
+    bestBefore: input.bestBefore ?? null,
+    purchasedOn: input.purchasedOn,
+    isDepleted: false,
+    depletedAt: null,
+    version: 1,
+    createdAt: ctx.now,
+    createdBy: ctx.userEmail,
+    updatedAt: ctx.now,
+    updatedBy: ctx.userEmail,
+  };
+  return { ok: true, value: { lot, history: history(lot, input.qty, 'IN', null, ctx) } };
+}
+
+/**
+ * 残量の修正：増減量＝新しい残量−今の残量を ADJUST として記録する。
+ * 増減がない場合は何も変えず、history は null。使い切りのロットは LOT_DEPLETED
+ */
+export function adjustLot(
+  lot: Lot,
+  remainingQty: number,
+  ctx: StockContext,
+): StockResult<{ lot: Lot; history: StockHistory | null }> {
+  if (lot.isDepleted) return fail('LOT_DEPLETED', lot);
+  const delta = subtractQty(remainingQty, lot.remainingQty);
+  if (delta === 0) return { ok: true, value: { lot, history: null } };
+  const updated = touch(lot, { remainingQty }, ctx);
+  return {
+    ok: true,
+    value: { lot: updated, history: history(updated, delta, 'ADJUST', null, ctx) },
+  };
+}
+
+/** 賞味期限・購入日の修正（在庫は増減しないため履歴は記録しない） */
+export function updateLotDates(
+  lot: Lot,
+  dates: Pick<UpdateLotPayload, 'bestBefore' | 'purchasedOn'>,
+  ctx: StockContext,
+): Lot {
+  return touch(lot, { bestBefore: dates.bestBefore ?? null, purchasedOn: dates.purchasedOn }, ctx);
 }

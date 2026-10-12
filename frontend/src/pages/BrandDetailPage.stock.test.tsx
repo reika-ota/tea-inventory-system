@@ -212,3 +212,62 @@ describe('SC-03 在庫の操作', () => {
     expect(await screen.findByRole('dialog', { name: '他の人が更新しました' })).toBeDefined();
   });
 });
+
+describe('SC-03 ロットの修正', () => {
+  beforeEach(() => useServer(data));
+
+  const openMenu = async (index = 0) => {
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'ロットの操作' }))[index] as HTMLElement,
+    );
+  };
+
+  it('残量を修正する（今の残量を初期値にし、0 も入力できる）', async () => {
+    renderApp('/brands/b1');
+    await openMenu();
+    fireEvent.click(await screen.findByRole('menuitem', { name: '残量を修正' }));
+    const dialog = await screen.findByRole('dialog', { name: '残量を修正' });
+    const input = within(dialog).getByLabelText<HTMLInputElement>('残量（g）');
+    expect(input.value).toBe('10');
+
+    fireEvent.change(input, { target: { value: '0' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    expect(await screen.findByText('残量を修正しました')).toBeDefined();
+    expect(server.requests[0]).toEqual({
+      action: 'adjustLot',
+      payload: { lotId: 'soon', version: 2, remainingQty: 0 },
+    });
+  });
+
+  it('残量が変わらなければ、その旨を通知する（履歴は記録されない）', async () => {
+    renderApp('/brands/b1');
+    await openMenu();
+    fireEvent.click(await screen.findByRole('menuitem', { name: '残量を修正' }));
+    const dialog = await screen.findByRole('dialog', { name: '残量を修正' });
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    expect(await screen.findByText('残量は変わっていません')).toBeDefined();
+    expect(server.histories).toHaveLength(1); // 最初からある使い切りの履歴だけ
+  });
+
+  it('賞味期限・購入日を修正する（賞味期限を空欄にすると未入力）', async () => {
+    renderApp('/brands/b1');
+    await openMenu();
+    fireEvent.click(await screen.findByRole('menuitem', { name: '賞味期限・購入日を修正' }));
+    const dialog = await screen.findByRole('dialog', { name: '賞味期限・購入日を修正' });
+    const bb = within(dialog).getByLabelText<HTMLInputElement>('賞味期限');
+    expect(bb.value).toBe('2099-01-01');
+
+    fireEvent.change(bb, { target: { value: '' } });
+    fireEvent.change(within(dialog).getByLabelText(/購入日/), { target: { value: '2999-01-01' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    expect(within(dialog).getByText('今日以前の日付を入力してください')).toBeDefined();
+
+    fireEvent.change(within(dialog).getByLabelText(/購入日/), { target: { value: '2026-08-15' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    expect(await screen.findByText('保存しました')).toBeDefined();
+    expect(server.requests[0]).toEqual({
+      action: 'updateLot',
+      payload: { lotId: 'soon', version: 2, bestBefore: null, purchasedOn: '2026-08-15' },
+    });
+  });
+});

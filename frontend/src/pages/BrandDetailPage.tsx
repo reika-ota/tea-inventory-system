@@ -1,15 +1,18 @@
-// SC-03 銘柄詳細（UI設計 2.3）。銘柄の編集・削除、残量・日付の修正、買い足しは実装順序8で追加する
+// SC-03 銘柄詳細（UI設計 2.3）。銘柄の編集・削除は実装順序8-2で追加する
 import type { Lot } from '@chaicoss/shared';
 import { toJstDate } from '@chaicoss/shared';
+import AddShoppingCart from '@mui/icons-material/AddShoppingCart';
 import DoneAll from '@mui/icons-material/DoneAll';
+import Event from '@mui/icons-material/Event';
 import LocalCafe from '@mui/icons-material/LocalCafe';
+import Tune from '@mui/icons-material/Tune';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useStockMutating } from '../api/mutations';
 import { useAllData } from '../api/queries';
 import { AlertBadges } from '../components/AlertBadges';
@@ -25,6 +28,7 @@ import { buildBrandDetailView } from '../features/brand/brandDetailView';
 import { FALLBACK_COLOR } from '../features/inventory/BrandRow';
 import type { ConsumeTarget } from '../features/stock/ConsumePanel';
 import { ConsumePanel } from '../features/stock/ConsumePanel';
+import { LotDatesDialog } from '../features/stock/LotDatesDialog';
 import { useStockActions } from '../features/stock/useStockActions';
 import { FORM_LABELS, formatBestBeforeShort, formatQty } from '../format';
 
@@ -41,6 +45,8 @@ export function BrandDetailPage() {
   const [menuLot, setMenuLot] = useState<Lot | null>(null);
   const [depletingLot, setDepletingLot] = useState<Lot | null>(null);
   const [amountOpen, setAmountOpen] = useState(false);
+  const [adjustingLot, setAdjustingLot] = useState<Lot | null>(null);
+  const [datingLot, setDatingLot] = useState<Lot | null>(null);
   const busy = useStockMutating();
   const form = data?.brands.find((b) => b.brandId === brandId)?.form;
   const actions = useStockActions(brandId, form);
@@ -159,7 +165,20 @@ export function BrandDetailPage() {
         />
 
         {/* ロット */}
-        <SectionTitle>ロット（{view.activeLots.length}）</SectionTitle>
+        <SectionTitle
+          action={
+            <Button
+              size="small"
+              component={Link}
+              to={`/brands/${brand.brandId}/purchase`}
+              startIcon={<AddShoppingCart fontSize="small" />}
+            >
+              買い足し
+            </Button>
+          }
+        >
+          ロット（{view.activeLots.length}）
+        </SectionTitle>
         <Paper square elevation={0} sx={listSx}>
           {view.activeLots.length > 0 ? (
             view.activeLots.map((lotView) => (
@@ -252,7 +271,7 @@ export function BrandDetailPage() {
         <HistoryList brandId={brand.brandId} form={brand.form} />
       </Box>
 
-      {/* ロットの操作メニュー（残量・日付の修正は実装順序8で追加する） */}
+      {/* ロットの操作メニュー */}
       <BottomSheet
         open={menuLot !== null}
         title={
@@ -273,6 +292,17 @@ export function BrandDetailPage() {
                     setPinnedLotId(menuLot.lotId);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   },
+                },
+                {
+                  icon: <Tune />,
+                  label: '残量を修正',
+                  disabled: busy,
+                  onClick: () => setAdjustingLot(menuLot),
+                },
+                {
+                  icon: <Event />,
+                  label: '賞味期限・購入日を修正',
+                  onClick: () => setDatingLot(menuLot),
                 },
                 {
                   icon: <DoneAll />,
@@ -299,6 +329,34 @@ export function BrandDetailPage() {
         onConfirm={(amount) => {
           setAmountOpen(false);
           actions.drink({ amount, ...(target?.pinned && { lotId: target.lot.lotId }) });
+        }}
+      />
+
+      {/* 残量を修正 */}
+      <QuantityDialog
+        open={adjustingLot !== null}
+        title="残量を修正"
+        description="計量した実際の残量を入力します。"
+        label="残量"
+        form={brand.form}
+        allowZero
+        initialValue={adjustingLot?.remainingQty}
+        confirmLabel="保存"
+        onCancel={() => setAdjustingLot(null)}
+        onConfirm={(remainingQty) => {
+          if (adjustingLot) actions.adjustLot(adjustingLot, remainingQty);
+          setAdjustingLot(null);
+        }}
+      />
+
+      {/* 賞味期限・購入日を修正 */}
+      <LotDatesDialog
+        lot={datingLot}
+        today={today}
+        onCancel={() => setDatingLot(null)}
+        onConfirm={(dates) => {
+          if (datingLot) actions.updateLotDates(datingLot, dates);
+          setDatingLot(null);
         }}
       />
 

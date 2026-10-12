@@ -1,20 +1,26 @@
 // テスト用の偽サーバー：shared の計算で在庫を更新し、GAS と同じ形の応答を返す
 import type {
   Action,
+  AdjustLotPayload,
   ConsumePayload,
   GetAllData,
   LotVersionPayload,
+  ReceiveLotPayload,
   StockContext,
   StockHistory,
   StockResult,
+  UpdateLotPayload,
 } from '@chaicoss/shared';
 import {
   ERROR_MESSAGES,
+  adjustLot,
   checkLotVersion,
   consumeLot,
   depleteLot,
   planConsume,
+  receiveLot,
   restoreLot,
+  updateLotDates,
 } from '@chaicoss/shared';
 import { ApiCallError } from '../api/client';
 
@@ -79,6 +85,26 @@ export function createFakeServer(initial: GetAllData, histories: StockHistory[] 
           return save(
             unwrap(restoreLot(lotOf(payload as LotVersionPayload), server.histories, ctx())),
           );
+        case 'receiveLot': {
+          const input = payload as ReceiveLotPayload;
+          const brand = server.data.brands.find((b) => b.brandId === input.brandId);
+          const result = unwrap(receiveLot(brand, input, ctx()));
+          server.data.lots.push(result.lot);
+          server.histories.push(result.history);
+          return result.lot;
+        }
+        case 'adjustLot': {
+          const input = payload as AdjustLotPayload;
+          const result = unwrap(adjustLot(lotOf(input), input.remainingQty, ctx()));
+          if (result.history) save({ lot: result.lot, history: result.history });
+          return result;
+        }
+        case 'updateLot': {
+          const input = payload as UpdateLotPayload;
+          const lot = updateLotDates(lotOf(input), input, ctx());
+          server.data.lots = server.data.lots.map((l) => (l.lotId === lot.lotId ? lot : l));
+          return lot;
+        }
         default:
           throw new Error(`未対応の action: ${action}`);
       }

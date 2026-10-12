@@ -1,7 +1,13 @@
 // SC-03 の在庫操作（飲んだ・使い切り・元に戻す）と、操作後の通知（UI設計 1.10・2.3）
-import type { Form, Lot } from '@chaicoss/shared';
+import type { Form, IsoDate, Lot } from '@chaicoss/shared';
 import { useState } from 'react';
-import { useConsume, useDepleteLot, useRestoreLot } from '../../api/mutations';
+import {
+  useAdjustLot,
+  useConsume,
+  useDepleteLot,
+  useRestoreLot,
+  useUpdateLot,
+} from '../../api/mutations';
 import { useFeedback } from '../../feedback/FeedbackContext';
 import { formatQty } from '../../format';
 
@@ -16,6 +22,8 @@ export function useStockActions(brandId: string, form: Form | undefined) {
   const consume = useConsume();
   const deplete = useDepleteLot();
   const restore = useRestoreLot();
+  const adjust = useAdjustLot();
+  const update = useUpdateLot();
   const { notify } = useFeedback();
   // 飲んだ結果、残量が0になったロット（使い切りの確認ダイアログを出す）
   const [emptiedLot, setEmptiedLot] = useState<Lot | null>(null);
@@ -62,8 +70,25 @@ export function useStockActions(brandId: string, form: Form | undefined) {
       },
     );
 
+  const adjustLot = (lot: Lot, remainingQty: number) =>
+    adjust.mutate(
+      { lotId: lot.lotId, version: lot.version, remainingQty },
+      {
+        onSuccess: (result) =>
+          notify(result.history ? '残量を修正しました' : '残量は変わっていません'),
+      },
+    );
+
+  const updateLotDates = (lot: Lot, dates: { bestBefore: IsoDate | null; purchasedOn: IsoDate }) =>
+    update.mutate(
+      { lotId: lot.lotId, version: lot.version, ...dates },
+      { onSuccess: () => notify('保存しました') },
+    );
+
   return {
     drink,
+    adjustLot,
+    updateLotDates,
     depleteLot,
     restoreLot,
     emptiedLot,

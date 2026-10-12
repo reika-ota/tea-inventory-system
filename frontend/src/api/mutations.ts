@@ -1,14 +1,24 @@
 // 在庫を変更する操作（詳細設計 7.3）：楽観的更新を行い、失敗したら元に戻す
 import type {
+  AdjustLotPayload,
   ConsumePayload,
   GetAllData,
   LotStockResult,
+  Lot,
   LotVersionPayload,
+  ReceiveLotPayload,
   StockHistory,
+  UpdateLotPayload,
 } from '@chaicoss/shared';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
-import { applyConsume, applyDeplete, applyRestore } from '../features/stock/optimistic';
+import {
+  applyAdjust,
+  applyConsume,
+  applyDeplete,
+  applyReceive,
+  applyRestore,
+} from '../features/stock/optimistic';
 import { useFeedback } from '../feedback/FeedbackContext';
 import { queryKeys } from './queries';
 import { useApi } from './useApi';
@@ -16,15 +26,15 @@ import { useApi } from './useApi';
 /** 在庫を変更する操作の共通のキー（実行中かどうかの判定に使う） */
 const STOCK_MUTATION_KEY = ['stock'] as const;
 
-interface StockMutationOptions<P> {
-  call(payload: P): Promise<LotStockResult>;
+interface StockMutationOptions<P, D> {
+  call(payload: P): Promise<D>;
   /** 対象の銘柄（履歴の再取得に使う） */
   brandIdOf(payload: P, data: GetAllData | undefined): string | undefined;
-  /** キャッシュを先に書き換える */
-  optimistic(data: GetAllData, payload: P, histories: StockHistory[] | undefined): GetAllData;
+  /** キャッシュを先に書き換える（楽観的更新しない操作は省略） */
+  optimistic?(data: GetAllData, payload: P, histories: StockHistory[] | undefined): GetAllData;
 }
 
-function useStockMutation<P>({ call, brandIdOf, optimistic }: StockMutationOptions<P>) {
+function useStockMutation<P, D>({ call, brandIdOf, optimistic }: StockMutationOptions<P, D>) {
   const queryClient = useQueryClient();
   const { notifyError } = useFeedback();
 
@@ -36,7 +46,7 @@ function useStockMutation<P>({ call, brandIdOf, optimistic }: StockMutationOptio
       await queryClient.cancelQueries({ queryKey: queryKeys.all });
       const previous = queryClient.getQueryData<GetAllData>(queryKeys.all);
       const brandId = brandIdOf(payload, previous);
-      if (previous) {
+      if (previous && optimistic) {
         const histories = brandId
           ? queryClient.getQueryData<StockHistory[]>(queryKeys.histories(brandId))
           : undefined;
@@ -66,7 +76,7 @@ const brandOfLot = (lotId: string, data: GetAllData | undefined) =>
 export function useConsume() {
   const callApi = useApi();
   const { email } = useAuth();
-  return useStockMutation<ConsumePayload>({
+  return useStockMutation<ConsumePayload, LotStockResult>({
     call: (payload) => callApi('consume', payload),
     brandIdOf: (payload) => payload.brandId,
     optimistic: (data, payload) => applyConsume(data, payload, email ?? ''),
@@ -77,7 +87,7 @@ export function useConsume() {
 export function useDepleteLot() {
   const callApi = useApi();
   const { email } = useAuth();
-  return useStockMutation<LotVersionPayload>({
+  return useStockMutation<LotVersionPayload, LotStockResult>({
     call: (payload) => callApi('depleteLot', payload),
     brandIdOf: (payload, data) => brandOfLot(payload.lotId, data),
     optimistic: (data, payload) => applyDeplete(data, payload, email ?? ''),
@@ -88,10 +98,41 @@ export function useDepleteLot() {
 export function useRestoreLot() {
   const callApi = useApi();
   const { email } = useAuth();
-  return useStockMutation<LotVersionPayload>({
+  return useStockMutation<LotVersionPayload, LotStockResult>({
     call: (payload) => callApi('restoreLot', payload),
     brandIdOf: (payload, data) => brandOfLot(payload.lotId, data),
     optimistic: (data, payload, histories) => applyRestore(data, payload, histories, email ?? ''),
+  });
+}
+
+/** 購入登録 */
+export function useReceiveLot() {
+  const callApi = useApi();
+  const { email } = useAuth();
+  return useStockMutation<ReceiveLotPayload, Lot>({
+    call: (payload) => callApi('receiveLot', payload),
+    brandIdOf: (payload) => payload.brandId,
+    optimistic: (data, payload) => applyReceive(data, payload, email ?? ''),
+  });
+}
+
+/** 残量の修正 */
+export function useAdjustLot() {
+  const callApi = useApi();
+  const { email } = useAuth();
+  return useStockMutation<AdjustLotPayload, { lot: Lot; history: StockHistory | null }>({
+    call: (payload) => callApi('adjustLot', payload),
+    brandIdOf: (payload, data) => brandOfLot(payload.lotId, data),
+    optimistic: (data, payload) => applyAdjust(data, payload, email ?? ''),
+  });
+}
+
+/** 賞味期限・購入日の修正（在庫は増減しないため楽観的更新はせず、成功後に取り直す） */
+export function useUpdateLot() {
+  const callApi = useApi();
+  return useStockMutation<UpdateLotPayload, Lot>({
+    call: (payload) => callApi('updateLot', payload),
+    brandIdOf: (payload, data) => brandOfLot(payload.lotId, data),
   });
 }
 
