@@ -2,7 +2,7 @@
 <rect width="512" height="512" rx="112" fill="#F6F1E7"/>
 <g transform="translate(256 256) scale(1.0) translate(-256 -256)">
 <defs><clipPath id="cup"><path d="M112 168 H352 V286 Q352 388 232 388 Q112 388 112 286 Z"/></clipPath></defs>
-<g transform="translate(24 -8)">
+<g transform="translate(8 -24)">
 <rect x="100" y="268" width="270" height="140" fill="#8E3F24" clip-path="url(#cup)"/>
 <path d="M112 168 H352 V286 Q352 388 232 388 Q112 388 112 286 Z" fill="none" stroke="#2E2A24" stroke-width="34" stroke-linejoin="round"/>
 <path d="M352 210 H372 Q420 210 420 258 Q420 306 372 306 H350" fill="none" stroke="#2E2A24" stroke-width="34" stroke-linejoin="round"/>
