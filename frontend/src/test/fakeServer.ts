@@ -6,6 +6,8 @@ import type {
   BrandVersionPayload,
   ConsumePayload,
   CreateBrandPayload,
+  CreateGenrePayload,
+  DeleteGenrePayload,
   GetAllData,
   LotVersionPayload,
   ReceiveLotPayload,
@@ -13,16 +15,21 @@ import type {
   StockHistory,
   DomainResult,
   UpdateBrandPayload,
+  UpdateGenrePayload,
   UpdateLotPayload,
 } from '@chaicoss/shared';
 import {
   ERROR_MESSAGES,
   adjustLot,
   checkBrandVersion,
+  checkGenreDeletable,
+  checkGenreVersion,
   createBrand,
+  createGenre,
   deleteBrand,
   restoreBrand,
   updateBrand,
+  updateGenre,
   checkLotVersion,
   consumeLot,
   depleteLot,
@@ -148,6 +155,39 @@ export function createFakeServer(initial: GetAllData, histories: StockHistory[] 
             b.brandId === updated.brandId ? updated : b,
           );
           return updated;
+        }
+        case 'createGenre': {
+          const genre = unwrap(
+            createGenre(server.data.genres, payload as CreateGenrePayload, ctx()),
+          );
+          server.data.genres.push(genre);
+          return genre;
+        }
+        case 'updateGenre': {
+          const input = payload as UpdateGenrePayload;
+          const current = unwrap(
+            checkGenreVersion(
+              server.data.genres.find((g) => g.genreId === input.genreId),
+              input.version,
+            ),
+          );
+          const genre = unwrap(updateGenre(current, server.data.genres, input, ctx()));
+          server.data.genres = server.data.genres.map((g) =>
+            g.genreId === genre.genreId ? genre : g,
+          );
+          return genre;
+        }
+        case 'deleteGenre': {
+          const input = payload as DeleteGenrePayload;
+          const genre = unwrap(
+            checkGenreVersion(
+              server.data.genres.find((g) => g.genreId === input.genreId),
+              input.version,
+            ),
+          );
+          unwrap(checkGenreDeletable(genre, server.data.brands));
+          server.data.genres = server.data.genres.filter((g) => g.genreId !== genre.genreId);
+          return { genreId: genre.genreId };
         }
         default:
           throw new Error(`未対応の action: ${action}`);

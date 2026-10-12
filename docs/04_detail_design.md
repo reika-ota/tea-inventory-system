@@ -2,10 +2,10 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 1.9 |
-| 作成日 | 2026-09-26（v1.9：2026-10-12） |
+| 版 | 1.10 |
+| 作成日 | 2026-09-26（v1.10：2026-10-12） |
 | フェーズ | 詳細設計 |
-| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.4） |
+| 前提資料 | 01_requirements.md（v1.4）、02_tech_selection.md（v1.3）、03_basic_design.md（v1.2）、05_ui_design.md（v1.5） |
 
 本書はClaude Codeによる実装の入力資料とする。実装中に判明した事項は本書を更新してから反映する。
 
@@ -291,6 +291,17 @@ export interface ApiError {
 
 - 銘柄はマスタのため、更新しても在庫履歴は記録しない（操作ログ operations には記録する）
 
+ジャンルマスタの更新の計算（domain/genre.ts）
+
+| 関数 | 内容 |
+|---|---|
+| `checkGenreVersion(genre, version)` | ジャンルの存在（NOT_FOUND）と版番号（VERSION_CONFLICT）の確認 |
+| `createGenre(genres, input, ctx)` / `updateGenre(genre, genres, input, ctx)` | 追加・編集（名前の重複は GENRE_NAME_DUPLICATE。自分自身は除く） |
+| `isGenreInUse(genre, brands)` / `checkGenreDeletable(genre, brands)` | 参照する銘柄（削除済み含む）があれば GENRE_IN_USE |
+
+- ジャンルには論理削除の列がないため、参照がないことを確認してから行を削除する（repository の `deleteRowById`）
+- ジャンルの色の入力チェック（色マスタにあるか）は、ロック前に colors シートを読んで行う
+
 定数（constants.ts）：`NEAR_EXPIRY_DAYS = 30`、`LOW_SERVINGS = 3`、`DEFAULT_SERVING = { LEAF: 3, BAG: 1 }`
 
 ---
@@ -395,6 +406,7 @@ doPost(e)
   - receiveLot は仮のロットを追加する。SC-05 は登録の成功後に SC-03 へ移る（失敗時は入力内容を残したままエラーを表示する）
   - updateLot は在庫が増減しないため楽観的更新を行わず、成功後に再取得する
 - マスタ系（ジャンル・銘柄）は楽観的更新を行わず、成功後に再取得する
+- ジャンルの並べ替え（上へ・下へ）は、移動後の並びを 1, 2, 3… と振り直し、表示順が変わるジャンルだけ updateGenre を順に送る（通常は2件）。途中で失敗した場合は再取得し、次の移動で振り直される
 - 削除・使い切りの直後の「元に戻す」は、画面を移動した後に押されることがあるため、画面が閉じても結果を受け取れる `mutateAsync` で実行し、完了を通知する
 - VERSION_CONFLICT 時はダイアログ（「他の人が更新しました」「最新の内容を読み込みました。内容を確認して、もう一度操作してください。」）で通知し、`['all']` を再取得する
 - その他の API エラーはスナックバーでメッセージを表示する（認証エラーは SC-01 で案内するため表示しない）
@@ -434,6 +446,7 @@ doPost(e)
 
 - 数量表示：LEAF は `12.5g`（整数なら `12g`）、BAG は `8個`
 - 日付表示：`2026/09/26`
+- SC-07 のアプリのバージョンは frontend/package.json の version を、ビルド時に埋め込む（Vite の define で `__APP_VERSION__`）
 - SC-02 の並び順の初期値：強調状態（期限切れ→期限間近→残りわずか→なし）→銘柄名
 - SC-02 の絞り込み・並び替えの状態は URL のクエリ文字列（`#/?genre=…&form=…&sort=…&alert=…&q=…`）に持たせる。詳細画面から戻ったとき、SC-06 からジャンルで絞り込んで遷移するときに使う
 - 当日はブラウザの時計による JST の日付とする

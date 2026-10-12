@@ -12,7 +12,7 @@ import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { PurchasePage } from './pages/PurchasePage';
 import { SummaryPage } from './pages/SummaryPage';
-import { SettingsPage } from './pages/PlaceholderPages';
+import { SettingsPage } from './pages/SettingsPage';
 
 /**
  * ログインしていなければログイン画面（SC-01）へ移動する。
