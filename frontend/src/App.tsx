@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
+import { FeedbackProvider } from './feedback/FeedbackProvider';
 import { BrandDetailPage } from './pages/BrandDetailPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
@@ -38,14 +39,16 @@ const guarded = (page: ReactNode) => <RequireAuth>{page}</RequireAuth>;
 
 export function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={guarded(<InventoryPage />)} />
-      <Route path="/brands/:brandId" element={guarded(<BrandDetailPage />)} />
-      <Route path="/summary" element={guarded(<SummaryPage />)} />
-      <Route path="/settings" element={guarded(<SettingsPage />)} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <FeedbackProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={guarded(<InventoryPage />)} />
+        <Route path="/brands/:brandId" element={guarded(<BrandDetailPage />)} />
+        <Route path="/summary" element={guarded(<SummaryPage />)} />
+        <Route path="/settings" element={guarded(<SettingsPage />)} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </FeedbackProvider>
   );
 }
 

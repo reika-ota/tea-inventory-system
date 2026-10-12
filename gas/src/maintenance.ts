@@ -8,10 +8,12 @@ import {
   appendGenres,
   appendHistories,
   appendLots,
+  deleteOperationsBefore,
   ensureSheet,
   hasRows,
 } from './repository';
 import { describeAuthSettings } from './auth';
+import { withLock } from './lock';
 import { buildSeedData } from './seed';
 import { getAll } from './services/query';
 
@@ -43,6 +45,28 @@ export function seedInitialData(): void {
     `初期データを投入しました：色${seed.colors.length}件、ジャンル${seed.genres.length}件、` +
       `銘柄${seed.brands.length}件、ロット${seed.lots.length}件、履歴${seed.histories.length}件`,
   );
+}
+
+/** 操作ログを残す日数 */
+const OPERATION_RETENTION_DAYS = 30;
+
+/** 30日より古い操作ログ（operations）を削除する（時間主導トリガーで毎日実行） */
+export function purgeOperations(): void {
+  const before = toJstDateTime(new Date(Date.now() - OPERATION_RETENTION_DAYS * 86_400_000));
+  const deleted = withLock(() => deleteOperationsBefore(before));
+  console.log(`${before} より前の操作ログを ${deleted} 件削除しました`);
+}
+
+/**
+ * purgeOperations を毎日実行するトリガーを設定する（初回に GAS エディタから1回実行する）。
+ * 何度実行しても、トリガーは1つだけになる。
+ */
+export function installTriggers(): void {
+  for (const trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction() === 'purgeOperations') ScriptApp.deleteTrigger(trigger);
+  }
+  ScriptApp.newTrigger('purgeOperations').timeBased().everyDays(1).atHour(3).create();
+  console.log('purgeOperations を毎日3時台に実行するトリガーを設定しました');
 }
 
 /**

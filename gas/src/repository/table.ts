@@ -44,6 +44,37 @@ export function appendRows(name: SheetName, rows: readonly Row[]): void {
 }
 
 /**
+ * ID 列の値で行を特定し、1行単位で書き換える（詳細設計 6.5）。
+ * 行が見つからない場合は、呼び出し側で存在を確認しているはずなので想定外のエラーにする。
+ */
+export function updateRow(name: SheetName, idColumn: string, row: Row): void {
+  const sheet = getSheet(name);
+  const header = headerOf(sheet);
+  const idIndex = header.indexOf(idColumn);
+  const lastRow = sheet.getLastRow();
+  if (idIndex < 0 || lastRow < 2) throw new Error(`行がありません: ${name}.${idColumn}`);
+  const ids = sheet.getRange(2, idIndex + 1, lastRow - 1, 1).getValues();
+  const index = ids.findIndex(([id]) => String(id) === String(row[idColumn]));
+  if (index < 0) throw new Error(`行がありません: ${name}.${idColumn}=${String(row[idColumn])}`);
+  const range = sheet.getRange(index + 2, 1, 1, header.length);
+  range.setNumberFormats([numberFormatsFor(header, SHEETS[name])]);
+  range.setValues(valuesFromRows(header, [row]));
+}
+
+/**
+ * 先頭（2行目）から、条件に合う行が続く間を削除する。削除した行数を返す。
+ * 時系列に追記しているシート（operations）の古い行を消すために使う。
+ */
+export function deleteLeadingRows(name: SheetName, shouldDelete: (row: Row) => boolean): number {
+  const sheet = getSheet(name);
+  const rows = rowsFromValues(sheet.getDataRange().getValues());
+  const count = rows.findIndex((row) => !shouldDelete(row));
+  const deleting = count < 0 ? rows.length : count;
+  if (deleting > 0) sheet.deleteRows(2, deleting);
+  return deleting;
+}
+
+/**
  * シートを作成し、ヘッダーと列の書式を設定する。
  * 既にあるシートのデータは変更せず、足りない列だけを右端に追加する。
  */
