@@ -202,6 +202,37 @@ export function historyFromRow(row: Row): StockHistory {
   };
 }
 
+/** 操作ログ（operations シート）。冪等性の確認に使う（詳細設計 6.4） */
+export interface OperationRecord {
+  opId: string;
+  /** action 名 */
+  opType: string;
+  processedAt: IsoDateTime;
+  userEmail: string;
+  /** 処理結果（data）の JSON 文字列。同じ op_id を再び受け取ったときにそのまま返す */
+  result: string;
+}
+
+export function operationFromRow(row: Row): OperationRecord {
+  return {
+    opId: readText(row.op_id),
+    opType: readText(row.op_type),
+    processedAt: readDateTime(row.processed_at),
+    userEmail: readText(row.user_email),
+    result: readText(row.result),
+  };
+}
+
+export function operationToRow(operation: OperationRecord): Row {
+  return {
+    op_id: operation.opId,
+    op_type: operation.opType,
+    processed_at: operation.processedAt,
+    user_email: operation.userEmail,
+    result: operation.result,
+  };
+}
+
 export function historyToRow(history: StockHistory): Row {
   return {
     history_id: history.historyId,

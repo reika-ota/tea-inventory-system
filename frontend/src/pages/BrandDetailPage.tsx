@@ -1,5 +1,8 @@
-// SC-03 銘柄詳細（UI設計 2.3）。実装順序6では参照のみ（消費・ロットの操作・編集は実装順序7・8で追加する）
+// SC-03 銘柄詳細（UI設計 2.3）。銘柄の編集・削除、残量・日付の修正、買い足しは実装順序8で追加する
+import type { Lot } from '@chaicoss/shared';
 import { toJstDate } from '@chaicoss/shared';
+import DoneAll from '@mui/icons-material/DoneAll';
+import LocalCafe from '@mui/icons-material/LocalCafe';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import Box from '@mui/material/Box';
@@ -7,16 +10,23 @@ import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useStockMutating } from '../api/mutations';
 import { useAllData } from '../api/queries';
 import { AlertBadges } from '../components/AlertBadges';
 import { AppHeader } from '../components/AppHeader';
+import { BottomSheet } from '../components/BottomSheet';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { QuantityDialog } from '../components/QuantityDialog';
 import { LoadError, Loading, SectionTitle } from '../components/QueryStatus';
 import { TeaCup } from '../components/TeaCup';
 import { HistoryList } from '../features/brand/HistoryList';
 import { DepletedLotItem, LotItem } from '../features/brand/LotItem';
 import { buildBrandDetailView } from '../features/brand/brandDetailView';
 import { FALLBACK_COLOR } from '../features/inventory/BrandRow';
-import { FORM_LABELS, formatQty } from '../format';
+import type { ConsumeTarget } from '../features/stock/ConsumePanel';
+import { ConsumePanel } from '../features/stock/ConsumePanel';
+import { useStockActions } from '../features/stock/useStockActions';
+import { FORM_LABELS, formatBestBeforeShort, formatQty } from '../format';
 
 const listSx = { borderTop: 1, borderBottom: 1, borderColor: 'divider' } as const;
 
@@ -25,6 +35,15 @@ export function BrandDetailPage() {
   const { data, isPending, error, refetch } = useAllData();
   // 使い切ったロットの一覧は、初めは閉じておく
   const [showDepleted, setShowDepleted] = useState(false);
+  // 「このロットから飲む」で指定したロット
+  const [pinnedLotId, setPinnedLotId] = useState<string | null>(null);
+  // 操作メニューを開いているロット、使い切りの確認をしているロット、量の指定ダイアログ
+  const [menuLot, setMenuLot] = useState<Lot | null>(null);
+  const [depletingLot, setDepletingLot] = useState<Lot | null>(null);
+  const [amountOpen, setAmountOpen] = useState(false);
+  const busy = useStockMutating();
+  const form = data?.brands.find((b) => b.brandId === brandId)?.form;
+  const actions = useStockActions(brandId, form);
   const today = toJstDate(new Date());
 
   if (isPending) {
@@ -59,6 +78,18 @@ export function BrandDetailPage() {
   const { brand, genre } = view;
   const color = genre?.color ?? FALLBACK_COLOR;
   const qty = (value: number) => formatQty(value, brand.form);
+
+  // 消費の対象：指定したロット（使い切りになっていなければ）、なければ引当ルールで次に使うロット
+  const pinned = view.activeLots.find((v) => v.lot.lotId === pinnedLotId)?.lot;
+  const next = view.activeLots.find((v) => v.isNext)?.lot;
+  const target: ConsumeTarget | null = pinned
+    ? { lot: pinned, pinned: true }
+    : next
+      ? { lot: next, pinned: false }
+      : null;
+  const unpinIf = (lot: Lot) => () => {
+    if (lot.lotId === pinnedLotId) setPinnedLotId(null);
+  };
 
   return (
     <>
@@ -114,6 +145,19 @@ export function BrandDetailPage() {
           </Box>
         </Paper>
 
+        {/* 消費パネル */}
+        <ConsumePanel
+          brand={brand}
+          target={target}
+          busy={busy}
+          onDrink={(servings) =>
+            actions.drink({ servings, ...(target?.pinned && { lotId: target.lot.lotId }) })
+          }
+          onAmount={() => setAmountOpen(true)}
+          onUseAll={() => target && actions.depleteLot(target.lot, unpinIf(target.lot))}
+          onUnpin={() => setPinnedLotId(null)}
+        />
+
         {/* ロット */}
         <SectionTitle>ロット（{view.activeLots.length}）</SectionTitle>
         <Paper square elevation={0} sx={listSx}>
@@ -125,6 +169,7 @@ export function BrandDetailPage() {
                 form={brand.form}
                 color={color}
                 today={today}
+                onMenu={() => setMenuLot(lotView.lot)}
               />
             ))
           ) : (
@@ -151,7 +196,14 @@ export function BrandDetailPage() {
             {showDepleted && (
               <Paper square elevation={0} sx={listSx}>
                 {view.depletedLots.map((lot) => (
-                  <DepletedLotItem key={lot.lotId} lot={lot} form={brand.form} today={today} />
+                  <DepletedLotItem
+                    key={lot.lotId}
+                    lot={lot}
+                    form={brand.form}
+                    today={today}
+                    busy={busy}
+                    onRestore={() => actions.restoreLot(lot)}
+                  />
                 ))}
               </Paper>
             )}
@@ -199,6 +251,87 @@ export function BrandDetailPage() {
         <SectionTitle>履歴</SectionTitle>
         <HistoryList brandId={brand.brandId} form={brand.form} />
       </Box>
+
+      {/* ロットの操作メニュー（残量・日付の修正は実装順序8で追加する） */}
+      <BottomSheet
+        open={menuLot !== null}
+        title={
+          menuLot
+            ? `ロット（${qty(menuLot.remainingQty)}／${formatBestBeforeShort(menuLot.bestBefore)}）`
+            : ''
+        }
+        onClose={() => setMenuLot(null)}
+        items={
+          menuLot
+            ? [
+                {
+                  icon: <LocalCafe />,
+                  label: 'このロットから飲む',
+                  disabled: menuLot.lotId === pinnedLotId,
+                  reason: '指定済みです',
+                  onClick: () => {
+                    setPinnedLotId(menuLot.lotId);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  },
+                },
+                {
+                  icon: <DoneAll />,
+                  label: '使い切りにする',
+                  danger: true,
+                  disabled: busy,
+                  onClick: () => setDepletingLot(menuLot),
+                },
+              ]
+            : []
+        }
+      />
+
+      {/* 量を指定して飲んだ */}
+      <QuantityDialog
+        open={amountOpen && target !== null}
+        title="量を指定して飲んだ"
+        description="ブレンドなどで1杯分と違う量を使ったときに使います。"
+        label="使った量"
+        form={brand.form}
+        max={target?.lot.remainingQty}
+        confirmLabel="飲んだ"
+        onCancel={() => setAmountOpen(false)}
+        onConfirm={(amount) => {
+          setAmountOpen(false);
+          actions.drink({ amount, ...(target?.pinned && { lotId: target.lot.lotId }) });
+        }}
+      />
+
+      {/* 使い切りの確認（ロットの操作メニューから） */}
+      <ConfirmDialog
+        open={depletingLot !== null}
+        title="使い切りにしますか？"
+        message={
+          depletingLot ? `残り${qty(depletingLot.remainingQty)}を使い切りとして記録します。` : ''
+        }
+        cancelLabel="キャンセル"
+        confirmLabel="使い切りにする"
+        onCancel={() => setDepletingLot(null)}
+        onConfirm={() => {
+          if (depletingLot) actions.depleteLot(depletingLot, unpinIf(depletingLot));
+          setDepletingLot(null);
+        }}
+      />
+
+      {/* 飲んだ結果、残量が0になった場合の確認 */}
+      <ConfirmDialog
+        open={actions.emptiedLot !== null}
+        title="使い切りにしますか？"
+        message="このロットの残量が0になりました。使い切りにすると一覧から外れます。"
+        cancelLabel="あとで"
+        confirmLabel="使い切りにする"
+        onCancel={actions.closeEmptied}
+        onConfirm={() => {
+          const lot = actions.emptiedLot;
+          actions.closeEmptied();
+          if (lot) actions.depleteLot(lot, unpinIf(lot));
+        }}
+      />
     </>
   );
 }
